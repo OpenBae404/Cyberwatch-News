@@ -29,6 +29,10 @@ The suite is two kinds of test:
            - tests/test_news_rank.py        the two-tier selection: KEV outranks
                                             severity, severity outranks reach,
                                             cap of five, quiet-KEV day still ships
+           - tests/test_run_entrypoint.py   run.py end to end on stubbed feeds:
+                                            a dated issue is written, a KEV
+                                            outage exits non-zero and writes
+                                            nothing, the window is never lastMod
            - tools/mutation_check.py        breaks src/rank.py and checks the
                                             control goes red
 
@@ -61,6 +65,14 @@ OFFLINE = [
      ["-m", "unittest", "tests.test_kev_source.TestKevParsing", "-v"]),
     ("rank: the two-tier newsletter selection",
      ["-m", "unittest", "tests.test_news_rank", "-v"]),
+    ("entrypoint: one command, a dated issue, a loud KEV outage",
+     ["-m", "unittest", "tests.test_run_entrypoint", "-v"]),
+    # Breaks the KEV-outage guard four ways on a throwaway copy and asserts the
+    # entrypoint tests go red each time. In the suite on purpose: the guard's
+    # whole job is to prevent a run that otherwise looks healthy, so a test
+    # nobody has watched fail is not evidence.
+    ("mutation: the KEV-outage guard is load-bearing",
+     ["tools/mutation_entrypoint_check.py"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.

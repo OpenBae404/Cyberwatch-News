@@ -157,6 +157,58 @@ def fetch_window(
         time.sleep(pause)
 
 
+def fetch_cves_by_id(
+    cve_ids: Iterable[str],
+    *,
+    api_key: str | None = None,
+    timeout: float = 45.0,
+    base_url: str = API_URL,
+    max_ids: int = 25,
+) -> list[NvdItem]:
+    """Fetch specific CVEs by id, one request each.
+
+    This is the only correct way to reach a CVE that the *published* window
+    cannot see. The window rule (Plans.md) exists to stop a CVE from July
+    appearing in a September issue because somebody edited its description.
+    A CVE that CISA added to the KEV catalogue this week is the opposite case:
+    the news is the listing, which happened this week, and the publication
+    date is irrelevant to it. Caller decides which of the two it is -- this
+    function only fetches what it is asked for.
+
+    Unknown ids are skipped, not raised on: NVD not knowing a CVE id CISA
+    listed is a data gap, not a broken run. Transport failures still raise
+    :class:`NvdError`.
+
+    `max_ids` caps the request count, because every id is one request against
+    a 5-per-30s public rate limit.
+    """
+    wanted = []
+    seen: set[str] = set()
+    for raw_id in cve_ids:
+        cve_id = str(raw_id or "").strip().upper()
+        if cve_id and cve_id not in seen:
+            seen.add(cve_id)
+            wanted.append(cve_id)
+    wanted = wanted[: max(0, max_ids)]
+    if not wanted:
+        return []
+
+    pause = _SLEEP_WITH_KEY if api_key else _SLEEP_NO_KEY
+    items: list[NvdItem] = []
+    for position, cve_id in enumerate(wanted):
+        params = {"cveId": cve_id}
+        payload = _get_json(
+            f"{base_url}?{urllib.parse.urlencode(params)}", api_key, timeout
+        )
+        for entry in payload.get("vulnerabilities") or []:
+            item = parse_vulnerability(entry)
+            if item is not None:
+                items.append(item)
+        if position + 1 < len(wanted):
+            time.sleep(pause)
+    return items
+
+
 # --------------------------------------------------------------------------- #
 # parsing
 # --------------------------------------------------------------------------- #

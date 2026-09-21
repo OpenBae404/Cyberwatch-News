@@ -17,7 +17,8 @@ Contract of this stage (spike scope):
               others do not use, so it cannot be skimmed past.
 
   * LLM    -- the four fields are written by the local OpenAI-compatible server
-              at http://127.0.0.1:8000/v1 when it is reachable AND serving a
+              (CYBERWATCH_LLM_BASE_URL; run.py points it at the newsletter's
+              server) when it is reachable AND serving a
               model. When it is missing, unreachable, model-less, slow or
               answers with junk, every field falls back to data already on the
               item (raw NVD description, product list, CVSS, references).
@@ -247,7 +248,7 @@ def raw_summary(item: Any) -> ItemSummary:
     else:
         who_parts.append("NVD lists no affected product for this entry yet.")
     if matched:
-        who_parts.append("Matches this homelab on: " + ", ".join(matched[:6]) + ".")
+        who_parts.append("Also named on this record: " + ", ".join(matched[:6]) + ".")
     who = " ".join(who_parts)
 
     severity = _text(_get(item, "cvss_severity", "")).upper()
@@ -269,7 +270,7 @@ def raw_summary(item: Any) -> ItemSummary:
         serious_parts.append(f"Vector: {vector}.")
     rank_score = _get(item, "score", None)
     if rank_score is not None:
-        serious_parts.append(f"Homelab relevance score: {rank_score}.")
+        serious_parts.append(f"Ranking score: {rank_score}.")
     serious = " ".join(serious_parts)
 
     refs = _seq(_get(item, "references", ()))
@@ -416,8 +417,10 @@ class LLMClient:
 # --------------------------------------------------------------------------- #
 
 _SYSTEM = (
-    "You rewrite CVE records for a homelab operator running Proxmox, "
-    "Debian/Ubuntu, Docker, Tailscale, a UGREEN NAS and nginx. "
+    "You rewrite CVE records for a daily security newsletter read by a general "
+    "technical audience -- sysadmins, developers and security staff running "
+    "many different stacks. Write for a reader who may or may not run the "
+    "affected software; never assume one particular machine or environment. "
     "Answer with a JSON object and nothing else. Keys, all required: "
     "what_happened, who_is_affected, how_serious, what_to_do. "
     "Each value is one or two plain sentences, no markdown, no bullet points. "
@@ -606,14 +609,14 @@ def _zero_match_issue(
     """
     if total_considered is not None:
         considered = (
-            f"No CVE matched the homelab profile. "
+            f"No CVE matched today's selection rule. "
             f"{total_considered} CVE{'s' if total_considered != 1 else ''} "
             f"considered in this window."
         )
     else:
         considered = (
-            "No CVE matched the homelab profile. The number of CVEs considered "
-            "was not recorded for this run."
+            "No CVE matched today's selection rule. The number of CVEs "
+            "considered was not recorded for this run."
         )
 
     return "\n".join(
@@ -674,9 +677,10 @@ def _intro(shown: int, total_considered: int | None, max_items: int) -> str:
     if total_considered is not None:
         return (
             f"{shown} item{'s' if shown != 1 else ''} out of {total_considered} "
-            f"considered, ranked against the homelab profile (cap {max_items})."
+            f"considered, known-exploited first, then severity and reach "
+            f"(cap {max_items})."
         )
     return (
-        f"{shown} item{'s' if shown != 1 else ''} ranked against the homelab "
-        f"profile (cap {max_items})."
+        f"{shown} item{'s' if shown != 1 else ''}, known-exploited first, then "
+        f"severity and reach (cap {max_items})."
     )
