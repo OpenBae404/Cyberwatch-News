@@ -1,0 +1,129 @@
+# CyberWatch Newsletter -- software reach table
+#
+# THE NAMED FILE the ranker reads for tier ordering (see src/news_rank.py and
+# the selection rule in Plans.md). Reach answers one question only: if this
+# software breaks, how many readers of a general security newsletter are
+# touched by it? It is NOT a profile, it is NOT one machine's inventory, and
+# adding a line here must never be a way to smuggle "my homelab runs this"
+# into an audience newsletter. If you cannot defend a line as "a lot of
+# readers run this", it does not belong.
+#
+# FORMAT
+#   <weight>  <token>            # trailing comment optional
+#   weight  0-100, higher = more readers affected
+#   token   matched case-insensitively as a whole word against the item's
+#           affected-product labels and against the vendor/product fields of
+#           its CPEs. Underscores in CPE names are read as spaces, so
+#           "internet explorer" matches cpe ...:internet_explorer:...
+#
+# A CVE scores the highest weight of any token it matches. No match scores 0 --
+# unknown reach, not zero reach, and it only ever loses a tie.
+#
+# Lines starting with # and blank lines are ignored.
+
+# --- runs under a very large share of the internet ----------------------- #
+100  windows                  # desktop + server, the single largest surface
+100  linux kernel
+98   chrome
+98   google chrome
+97   android
+96   openssl
+95   iphone os              # the CPE spelling; plain "ios" would eat Cisco IOS
+95   apple
+94   macos
+93   safari
+92   edge
+92   microsoft edge
+90   firefox
+90   mozilla
+
+# --- server software a majority of hosting depends on -------------------- #
+88   openssh
+88   ssh
+86   apache
+86   http server
+85   nginx
+84   php
+83   mysql
+83   mariadb
+82   postgresql
+80   openbsd
+80   debian
+80   ubuntu
+79   red hat
+79   rhel
+78   centos
+76   docker
+75   kubernetes
+74   systemd
+72   curl
+72   glibc
+70   bind
+70   dns
+
+# --- the enterprise middle: not everywhere, but everywhere that matters -- #
+68   microsoft office
+68   exchange
+66   sharepoint
+66   outlook
+65   active directory
+64   vmware
+64   esxi
+63   citrix
+62   fortinet
+62   fortios
+61   palo alto
+61   pan-os
+60   cisco
+60   ios xe
+58   ivanti
+58   pulse secure
+57   sonicwall
+56   f5
+56   big-ip
+55   juniper
+54   sap
+53   oracle
+52   jenkins
+52   gitlab
+51   atlassian
+51   confluence
+50   jira
+
+# --- widely used libraries and runtimes ---------------------------------- #
+48   java
+48   openjdk
+47   python
+46   node.js
+46   nodejs
+45   npm
+44   .net
+44   dotnet
+43   log4j
+42   spring framework
+41   wordpress
+40   drupal
+39   joomla
+38   git
+37   zlib
+36   libxml2
+35   ffmpeg
+34   imagemagick
+33   7-zip
+32   winrar
+31   pdf reader
+31   acrobat
+
+# --- consumer edge kit: one household each, but a great many households --- #
+28   tp-link
+27   netgear
+26   d-link
+25   asus
+24   synology
+23   qnap
+22   ubiquiti
+20   android tv
+18   chromecast
+
+# Anything absent scores 0. That is deliberate: a newsletter should not claim
+# reach it cannot argue for, and a zero only costs an item a tie-break.
