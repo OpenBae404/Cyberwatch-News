@@ -19,6 +19,9 @@ The suite is two kinds of test:
                                             and docker vs dockerfile_parser
            - tests/test_negative_control.py the control, plus its mutant
            - tests/test_render_fields.py    four labelled fields per item
+           - tests/test_render_reason.py    every item says in words whether it
+                                            is known-exploited or severity-
+                                            chosen, and KEV items look different
            - tests/test_render_empty.py     zero matches renders an honest,
                                             unpadded document
            - tests/test_kev_source.py       TestKevParsing: the KEV parser,
@@ -52,6 +55,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OFFLINE = [
     ("unit: dedupe", ["-m", "unittest", "tests.test_dedupe", "-v"]),
     ("render: four labelled fields", ["-m", "unittest", "tests.test_render_fields", "-v"]),
+    ("render: why each item is in the issue",
+     ["-m", "unittest", "tests.test_render_reason", "-v"]),
     ("kev: parser and error contract",
      ["-m", "unittest", "tests.test_kev_source.TestKevParsing", "-v"]),
     ("rank: the two-tier newsletter selection",
