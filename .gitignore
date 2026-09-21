@@ -2,3 +2,7 @@ __pycache__/
 *.pyc
 .venv/
 .scratch/
+
+# Hermes cuts per-card worktrees here. Never commit one: git add -A would
+# otherwise pull an entire nested checkout into this repo.
+.worktrees/
