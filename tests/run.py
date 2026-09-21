@@ -22,6 +22,12 @@ The suite is two kinds of test:
            - tests/test_render_reason.py    every item says in words whether it
                                             is known-exploited or severity-
                                             chosen, and KEV items look different
+           - tests/test_render_llm.py       the summarisation call transmits
+                                            enable_thinking=false (asserted on
+                                            the request bytes), and a model
+                                            that answers nothing is announced
+                                            loudly instead of silently falling
+                                            back to raw NVD text
            - tests/test_render_empty.py     zero matches renders an honest,
                                             unpadded document
            - tests/test_kev_source.py       TestKevParsing: the KEV parser,
@@ -61,6 +67,12 @@ OFFLINE = [
     ("render: four labelled fields", ["-m", "unittest", "tests.test_render_fields", "-v"]),
     ("render: why each item is in the issue",
      ["-m", "unittest", "tests.test_render_reason", "-v"]),
+    # The LLM path: the flag that makes the reasoning model answer at all, and
+    # the loud failure when it does not. Placed next to the other render tests
+    # because it is the same stage; kept separate because it is the only one
+    # that asserts on transmitted bytes.
+    ("render: the LLM writes, and silence is loud",
+     ["-m", "unittest", "tests.test_render_llm", "-v"]),
     ("kev: parser and error contract",
      ["-m", "unittest", "tests.test_kev_source.TestKevParsing", "-v"]),
     ("rank: the two-tier newsletter selection",
