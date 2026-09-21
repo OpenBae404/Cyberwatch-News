@@ -22,7 +22,30 @@ Contract of this stage (spike scope):
               model. When it is missing, unreachable, model-less, slow or
               answers with junk, every field falls back to data already on the
               item (raw NVD description, product list, CVSS, references).
-              Rendering never raises because of the LLM.
+              Rendering never raises because of the LLM unless the caller asks
+              for it with ``strict=True``.
+
+              The server runs a REASONING model (a local model). Left to its
+              defaults it spends the whole token budget on chain-of-thought and
+              answers ``content: null`` with ``finish_reason: "length"`` -- a
+              working server that writes nothing. Every summarisation call
+              therefore carries ``chat_template_kwargs: {"enable_thinking":
+              false}``; measured against the live server, the same prompt then
+              answers in ~17 tokens instead of burning 200 and returning null.
+              This module speaks raw HTTP, so the flag goes at the top level of
+              the request body -- that IS the wire format. (``extra_body`` is
+              only how the OpenAI *python client* smuggles a non-standard key
+              into that same place; there is no client here to smuggle past.)
+              `LLMClient.last_request` keeps the exact object that was
+              serialised, so a test can assert on what was transmitted rather
+              than on what we meant to transmit.
+
+  * failure -- when the model is asked and returns nothing usable, the issue
+              says so at the top, on every affected item, and on stderr. The
+              silent version of this shipped an issue whose "What happened"
+              opened with a kernel commit message and whose "Who is affected"
+              printed raw CPE strings, under one apologetic line in the footer.
+              Falling back is fine; falling back quietly is not.
 
 Ranking stays inspectable elsewhere; this module only phrases and formats.
 """
@@ -32,9 +55,10 @@ from __future__ import annotations
 import json
 import os
 import re
+import sys
 import urllib.error
 import urllib.request
-from dataclasses import dataclass
+from dataclasses import dataclass, replace
 from datetime import date, datetime, timezone
 from typing import Any, Iterable, Sequence
 
@@ -49,6 +73,21 @@ DEFAULT_LLM_MODEL = os.environ.get("CYBERWATCH_LLM_MODEL") or None
 DEFAULT_TIMEOUT = float(os.environ.get("CYBERWATCH_LLM_TIMEOUT", "30"))
 
 MAX_ITEMS = 5
+
+# The newsletter's server runs a reasoning model. Without this flag it answers
+# `content: null` after spending the whole budget on hidden chain-of-thought.
+# It is sent at the top level of the chat/completions body, which is where the
+# server reads it from; `extra_body` is an OpenAI-python-client wrapper around
+# the same position and means nothing to a raw urllib request.
+THINKING_OFF: dict[str, Any] = {"enable_thinking": False}
+
+# What the page says when the model was asked and wrote nothing usable.
+FAILURE_BADGE = "SUMMARY FAILED"
+_ITEM_FAILURE = (
+    "The model was asked for this item and returned nothing usable ({error}). "
+    "The four fields below are unedited NVD data -- raw vendor text, commit "
+    "messages and CPE strings -- not a summary written for a reader."
+)
 
 # The four fields are fixed. Order and labels are part of the acceptance.
 FIELD_LABELS = (
@@ -100,9 +139,22 @@ _SEVERITY_NOTE = {
 
 
 # --------------------------------------------------------------------------- #
-# item access (works for dataclasses, objects and dicts)
+# failure
 # --------------------------------------------------------------------------- #
 
+class SummaryFailure(RuntimeError):
+    """The model was asked for summaries and wrote nothing usable.
+
+    Raised only by `render_issue(strict=True)`. The default path still returns
+    a document -- raw NVD text is better than no newsletter -- but that
+    document announces the failure in its first lines. A caller that would
+    rather ship nothing than ship vendor changelogs asks for this instead.
+    """
+
+
+# --------------------------------------------------------------------------- #
+# item access (works for dataclasses, objects and dicts)
+# --------------------------------------------------------------------------- #
 def _get(item: Any, name: str, default: Any = None) -> Any:
     """Read `name` off an object attribute or a dict key. Never raises."""
     if isinstance(item, dict):
@@ -132,13 +184,28 @@ def _seq(value: Any) -> tuple[str, ...]:
 
 @dataclass(frozen=True)
 class ItemSummary:
-    """The four fields for one item, plus where they came from."""
+    """The four fields for one item, plus where they came from.
+
+    `source` is three-valued, and the third value is the point of this class:
+
+        "llm"     the model wrote these four fields
+        "raw"     the model was never asked (no server, or --no-llm): the
+                  fields are NVD data, and that is the expected outcome
+        "failed"  the model WAS asked and answered with nothing usable. The
+                  fields are the same NVD data, but this is a defect, and a
+                  document rendering it must say so where a reader will see it.
+    """
 
     what_happened: str
     who_is_affected: str
     how_serious: str
     what_to_do: str
-    source: str  # "llm" or "raw"
+    source: str  # "llm", "raw" or "failed"
+    error: str = ""
+
+    @property
+    def failed(self) -> bool:
+        return self.source == "failed"
 
     def as_dict(self) -> dict[str, str]:
         return {key: getattr(self, key) for key, _ in FIELD_LABELS}
@@ -315,6 +382,12 @@ class LLMClient:
         self.timeout = timeout
         self.model = model
         self.error: str | None = None
+        # The last chat body that was actually serialised onto the socket, and
+        # its bytes. Kept so a test can assert on what was transmitted rather
+        # than on what this code intended to transmit -- the card's warning
+        # about the flag being accepted-but-not-sent is only checkable here.
+        self.last_request: dict[str, Any] | None = None
+        self.last_request_bytes: bytes | None = None
         self.available = self._probe()
 
     # -- plumbing -------------------------------------------------------- #
@@ -322,6 +395,9 @@ class LLMClient:
     def _request(self, path: str, payload: dict | None = None) -> Any:
         url = f"{self.base_url}{path}"
         data = json.dumps(payload).encode() if payload is not None else None
+        if data is not None and path == "/chat/completions":
+            self.last_request = payload
+            self.last_request_bytes = data
         req = urllib.request.Request(
             url,
             data=data,
@@ -380,10 +456,15 @@ class LLMClient:
             ],
             "temperature": 0.2,
             "max_tokens": max_tokens,
+            # Not optional. A reasoning model left to its default answers
+            # `content: null` and `finish_reason: "length"` -- see the module
+            # docstring. Top level IS the wire position the server reads.
+            "chat_template_kwargs": dict(THINKING_OFF),
         }
         try:
             body = self._request("/chat/completions", payload)
-            content = body["choices"][0]["message"]["content"]
+            choice = body["choices"][0]
+            content = choice["message"]["content"]
         except (
             urllib.error.URLError,
             OSError,
@@ -397,12 +478,30 @@ class LLMClient:
             return None
         # A reachable, model-serving server may still answer with a non-string
         # content (the OpenAI content-part array, an object, a number). Treat
-        # it as no answer instead of letting it reach .strip() downstream.
+        # it as no answer instead of letting it reach .strip() downstream --
+        # but name the reasoning-model case exactly, because "content: null
+        # with finish_reason length" means the flag above did not take effect
+        # and every other diagnosis would send the reader looking elsewhere.
         if not isinstance(content, str):
-            self.error = (
-                f"completion answered with content of type "
-                f"{type(content).__name__}, not a string"
-            )
+            finish = choice.get("finish_reason") if isinstance(choice, dict) else None
+            if content is None and finish == "length":
+                used = ""
+                if isinstance(body, dict) and isinstance(body.get("usage"), dict):
+                    used = f", {body['usage'].get('completion_tokens')} tokens spent"
+                self.error = (
+                    "model answered with no content and ran out of budget"
+                    f"{used} -- it is still thinking despite "
+                    "chat_template_kwargs.enable_thinking=false; the server "
+                    "is ignoring or not receiving the flag"
+                )
+            else:
+                self.error = (
+                    f"completion answered with content of type "
+                    f"{type(content).__name__}, not a string"
+                )
+            return None
+        if not content.strip():
+            self.error = "model answered with an empty string"
             return None
         return content
 
@@ -447,10 +546,22 @@ def _prompt_for(item: Any) -> str:
 
 def _parse_summary(text: Any) -> dict[str, str] | None:
     """Pull the four fields out of an LLM answer. None if it is unusable."""
+    parsed, _why = _parse_summary_explained(text)
+    return parsed
+
+
+def _parse_summary_explained(text: Any) -> tuple[dict[str, str] | None, str]:
+    """`_parse_summary`, plus the reason it failed.
+
+    The reason is not decoration: it is the difference between "the server is
+    down" and "the server answered with chain-of-thought", and the second one
+    shipped an issue full of kernel commit messages because nothing carried
+    that sentence to the page.
+    """
     if not isinstance(text, str):
-        return None  # a non-string answer is no answer, never a .strip() crash
+        return None, f"answer was {type(text).__name__}, not text"
     if not text or not text.strip():
-        return None
+        return None, "answer was empty"
     blob = text.strip()
     if blob.startswith("```"):
         blob = re.sub(r"^```[a-zA-Z]*\s*|\s*```$", "", blob).strip()
@@ -460,29 +571,47 @@ def _parse_summary(text: Any) -> dict[str, str] | None:
     try:
         data = json.loads(blob)
     except (ValueError, json.JSONDecodeError):
-        return None
+        return None, "answer was not JSON"
     if not isinstance(data, dict):
-        return None
+        return None, f"answer was a JSON {type(data).__name__}, not an object"
     out: dict[str, str] = {}
     for key, _label in FIELD_LABELS:
         value = data.get(key)
         if isinstance(value, (list, tuple)):
             value = " ".join(str(v) for v in value)
         if value is None or not str(value).strip():
-            return None  # partial answers are not trusted -- fall back wholesale
+            # partial answers are not trusted -- fall back wholesale
+            return None, f"answer had no usable {key!r}"
         out[key] = _text(value)
-    return out
+    return out, ""
 
 
 def summarise_item(item: Any, client: LLMClient | None = None) -> ItemSummary:
-    """Four fields for one item. Falls back to `raw_summary` on any trouble."""
+    """Four fields for one item.
+
+    Three outcomes, and they are not interchangeable:
+
+      * the model wrote them            -> source "llm"
+      * the model was never asked       -> source "raw"   (expected)
+      * the model was asked and failed  -> source "failed" (a defect, carried
+        to the page by `render_item`; the fields are raw NVD text either way,
+        but only one of the two is allowed to look normal)
+    """
     fallback = raw_summary(item)
-    if client is None or not client.available:
+    if client is None or not getattr(client, "available", False):
         return fallback
     answer = client.complete(_SYSTEM, _prompt_for(item))
-    parsed = _parse_summary(answer or "")
+    parsed, why = _parse_summary_explained(answer)
     if parsed is None:
-        return fallback
+        # `client.error` is the transport/protocol story and can be left over
+        # from an earlier item, so it is only trusted when the call itself
+        # returned nothing. A returned-but-unusable answer is described by
+        # `why`, which was computed from this item's answer.
+        if answer is None:
+            detail = getattr(client, "error", None) or why or "no answer"
+        else:
+            detail = why or "answer unusable"
+        return replace(fallback, source="failed", error=_text(detail))
     return ItemSummary(source="llm", **parsed)
 
 
@@ -508,8 +637,12 @@ def render_item(item: Any, summary: ItemSummary | None = None, *, index: int | N
 
     number = f"{index}. " if index is not None else ""
     marker = f"{KEV_BADGE} -- " if reason.known_exploited else ""
+    if summary.failed:
+        marker = f"{FAILURE_BADGE} -- " + marker
     heading = f"## {number}{marker}[{cve_id}]({url})"
     tags = []
+    if summary.failed:
+        tags.append(FAILURE_BADGE)
     if reason.known_exploited:
         # First tag, so the badge is the first thing after the title.
         tags.append(KEV_BADGE)
@@ -524,6 +657,14 @@ def render_item(item: Any, summary: ItemSummary | None = None, *, index: int | N
         heading += "  \n`" + "` `".join(tags) + "`"
 
     lines = [heading, ""]
+    if summary.failed:
+        # Above the KEV callout and above the fields: the first thing under
+        # the title says these four fields are not a summary. Silently
+        # printing raw NVD text here is the defect this block exists for.
+        lines.append(f"> **{FAILURE_BADGE}.** " + _ITEM_FAILURE.format(
+            error=summary.error or "no reason recorded"
+        ))
+        lines.append("")
     if reason.known_exploited:
         # Callout above the fields: a reader who stops at the first line still
         # learns this one is being exploited.
@@ -547,11 +688,19 @@ def render_issue(
     title: str = "CyberWatch",
     issue_date: date | None = None,
     total_considered: int | None = None,
+    strict: bool = False,
+    warn: Any = None,
 ) -> str:
     """Join per-item blocks into ONE markdown issue document.
 
     `client` is built on demand when `use_llm` is true; pass one in to reuse a
     probe, or pass `use_llm=False` to force the raw path.
+
+    When the model is asked and writes nothing usable, the document says so in
+    three places -- a banner under the title, a callout on each affected item,
+    and the footer -- and a line goes to `warn` (stderr by default). With
+    `strict=True` that situation raises :class:`SummaryFailure` instead, for a
+    caller that would rather ship nothing than ship raw NVD text.
     """
     chosen = list(items)[: max(0, max_items)]
     issue_date = issue_date or datetime.now(timezone.utc).date()
@@ -567,6 +716,22 @@ def render_issue(
 
     summaries = [summarise_item(it, client) for it in chosen]
     llm_used = sum(1 for s in summaries if s.source == "llm")
+    failed = [s for s in summaries if s.failed]
+
+    if failed:
+        detail = failed[0].error or "no reason recorded"
+        message = (
+            f"render: {len(failed)} of {len(chosen)} summaries were NOT written "
+            f"by the model -- those items carry raw NVD text. First reason: "
+            f"{detail}"
+        )
+        if strict:
+            raise SummaryFailure(message)
+        stream = sys.stderr if warn is None else warn
+        try:
+            print(message, file=stream)
+        except (AttributeError, TypeError, ValueError, OSError):
+            pass  # a caller's odd stream must not break rendering
 
     reasons = [selection_reason(it) for it in chosen]
 
@@ -578,16 +743,23 @@ def render_issue(
         _selection_note(reasons),
         "",
     ]
+    if failed:
+        # Second line of the document, before anything that reads like news.
+        header[2:2] = [_failure_banner(len(failed), len(chosen), failed[0].error), ""]
 
     blocks = [
         render_item(it, summary, index=n)
         for n, (it, summary) in enumerate(zip(chosen, summaries), start=1)
     ]
 
-    if client is not None and client.available and llm_used:
+    if failed:
+        note = (
+            f"Summaries: {FAILURE_BADGE} -- {len(failed)} of {len(chosen)} "
+            f"item(s) fell back to raw NVD text because the model returned "
+            f"nothing usable ({failed[0].error or 'no reason recorded'})."
+        )
+    elif client is not None and getattr(client, "available", False) and llm_used:
         note = f"Summaries: {llm_used}/{len(chosen)} written by {client.describe()}."
-    elif client is not None and client.available:
-        note = f"Summaries: raw NVD text -- {client.describe()} returned nothing usable."
     else:
         detail = client.describe() if client is not None else "LLM disabled"
         note = f"Summaries: raw NVD text -- {detail}."
@@ -595,6 +767,23 @@ def render_issue(
     footer = ["---", "", f"_{note}_", "_Source: NVD CVE 2.0 API._", ""]
 
     return "\n".join(header) + "\n---\n\n" + "\n---\n\n".join(blocks) + "\n" + "\n".join(footer)
+
+
+def _failure_banner(failed: int, total: int, error: str) -> str:
+    """The line under the title when the model wrote nothing usable.
+
+    Deliberately not phrased as a footnote. The version of this newsletter
+    that shipped raw kernel commit messages said "returned nothing usable" in
+    small print at the bottom, under an issue that otherwise read normally.
+    """
+    subject = "item" if failed == 1 else "items"
+    return (
+        f"**{FAILURE_BADGE}: {failed} of {total} {subject} below are NOT "
+        f"summaries.** The model was reachable but returned nothing usable "
+        f"({error or 'no reason recorded'}), so those {subject} show unedited "
+        f"NVD text -- vendor changelogs, commit messages and CPE strings. "
+        f"Read them as raw data, and treat this issue as a failed run."
+    )
 
 
 def _zero_match_issue(
