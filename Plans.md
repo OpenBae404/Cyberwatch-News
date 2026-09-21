@@ -48,10 +48,9 @@ copied as working plumbing. This is a deliberate fork, not a library: two small
 products, and copying beats a shared package nobody has designed yet. If a
 third consumer appears, extract one instead of copying again.
 
-**Known bug carried over:** `nvd.py` is fetched by the old entrypoint with a
-`lastMod` window alongside the `published` one, so a CVE published in July can
-appear in a September issue because somebody edited it. The newsletter must use
-the published window only.
+**Known bug carried over:** `nvd.py` callers must use the published window
+only. A `lastMod` window makes a CVE published in July appear in a September
+issue because somebody edited it.
 
 ## Out of scope
 

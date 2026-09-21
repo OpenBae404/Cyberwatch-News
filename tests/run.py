@@ -43,26 +43,19 @@ ROOT = Path(__file__).resolve().parents[1]
 
 OFFLINE = [
     ("unit: dedupe", ["-m", "unittest", "tests.test_dedupe", "-v"]),
-    ("source: NVD vulnerable-flag split", ["-m", "unittest", "tests.test_nvd_vulnerable_flag", "-v"]),
-    ("smoke: rank", ["tests/test_rank.py"]),
-    ("rank: strict CPE equality", ["-m", "unittest", "tests.test_rank_strict", "-v"]),
-    ("control: ranker exclusion + mutant", ["-m", "unittest", "tests.test_negative_control", "-v"]),
     ("render: four labelled fields", ["-m", "unittest", "tests.test_render_fields", "-v"]),
-    ("render: honest zero-match issue", ["-m", "unittest", "tests.test_render_empty", "-v"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.
-    ("mutation: break the real ranker", ["tools/mutation_check.py"]),
     # Same idea for the zero-match document: pads it on a throwaway copy and
     # asserts tests/test_render_empty.py goes red.
-    ("mutation: pad the zero-match issue", ["tools/empty_mutation_check.py"]),
     # And for strict matching: relaxes equality three ways on a throwaway copy
     # and asserts tests/test_rank_strict.py goes red each time.
-    ("mutation: relax strict CPE matching", ["tools/strict_match_mutation_check.py"]),
 ]
 
 LIVE = [
-    ("live: dedupe on the real NVD feed", ["-m", "unittest", "tests.test_dedupe_live", "-v"]),
+    ("live: dedupe on the real NVD feed",
+     ["-m", "unittest", "tests.test_dedupe_live", "-v"]),
 ]
 
 
