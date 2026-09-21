@@ -23,6 +23,9 @@ The suite is two kinds of test:
                                             unpadded document
            - tests/test_kev_source.py       TestKevParsing: the KEV parser,
                                             its lookup and its error contract
+           - tests/test_news_rank.py        the two-tier selection: KEV outranks
+                                            severity, severity outranks reach,
+                                            cap of five, quiet-KEV day still ships
            - tools/mutation_check.py        breaks src/rank.py and checks the
                                             control goes red
 
@@ -51,6 +54,8 @@ OFFLINE = [
     ("render: four labelled fields", ["-m", "unittest", "tests.test_render_fields", "-v"]),
     ("kev: parser and error contract",
      ["-m", "unittest", "tests.test_kev_source.TestKevParsing", "-v"]),
+    ("rank: the two-tier newsletter selection",
+     ["-m", "unittest", "tests.test_news_rank", "-v"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.
