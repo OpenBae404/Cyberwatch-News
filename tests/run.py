@@ -21,11 +21,16 @@ The suite is two kinds of test:
            - tests/test_render_fields.py    four labelled fields per item
            - tests/test_render_empty.py     zero matches renders an honest,
                                             unpadded document
+           - tests/test_kev_source.py       TestKevParsing: the KEV parser,
+                                            its lookup and its error contract
            - tools/mutation_check.py        breaks src/rank.py and checks the
                                             control goes red
 
-  live     hits the real NVD API, takes about a minute
+  live     hits the real NVD API and the real CISA KEV feed, takes about a
+           minute
            - tests/test_dedupe_live.py      pre-count > post-count for real
+           - tests/test_kev_source.py       TestKevLiveFeed: the live CISA
+                                            catalogue's shape and dates
 
 Offline first: if the ranker or the renderer is broken, there is no reason to
 spend a minute on the network to find out.
@@ -44,6 +49,8 @@ ROOT = Path(__file__).resolve().parents[1]
 OFFLINE = [
     ("unit: dedupe", ["-m", "unittest", "tests.test_dedupe", "-v"]),
     ("render: four labelled fields", ["-m", "unittest", "tests.test_render_fields", "-v"]),
+    ("kev: parser and error contract",
+     ["-m", "unittest", "tests.test_kev_source.TestKevParsing", "-v"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.
@@ -56,6 +63,8 @@ OFFLINE = [
 LIVE = [
     ("live: dedupe on the real NVD feed",
      ["-m", "unittest", "tests.test_dedupe_live", "-v"]),
+    ("live: the real CISA KEV catalogue",
+     ["-m", "unittest", "tests.test_kev_source.TestKevLiveFeed", "-v"]),
 ]
 
 
