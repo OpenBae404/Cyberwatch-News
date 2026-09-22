@@ -79,6 +79,11 @@ OFFLINE = [
      ["-m", "unittest", "tests.test_news_rank", "-v"]),
     ("entrypoint: one command, a dated issue, a loud KEV outage",
      ["-m", "unittest", "tests.test_run_entrypoint", "-v"]),
+    # The audit instrument's own pass rule: a reach figure with no vulnerable
+    # CPE behind it must fail the run, whichever surface it came in through.
+    # In the suite because an instrument that cannot say no is not evidence.
+    ("audit: the live reach audit can fail",
+     ["-m", "unittest", "tests.test_live_reach_audit", "-v"]),
     # Breaks the KEV-outage guard four ways on a throwaway copy and asserts the
     # entrypoint tests go red each time. In the suite on purpose: the guard's
     # whole job is to prevent a run that otherwise looks healthy, so a test

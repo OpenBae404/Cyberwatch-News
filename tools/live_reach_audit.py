@@ -10,9 +10,15 @@ checks the two claims the fix makes, item by item:
   1. **Every reach figure traces to a CPE the live feed marks vulnerable.**
      For each chosen item with `reach > 0`, the matched token is looked for in
      the vendor/product fields of `vulnerable_cpes`, and separately in
-     `platform_cpes` and in the `affected_products` display labels. A token
-     that is only reachable through a platform CPE is the CVE-2026-87886 bug
-     and is reported as a FAIL.
+     `platform_cpes` and in the `affected_products` display labels. Anything
+     other than a hit in `vulnerable_cpes` is a FAIL, because the criterion is
+     traceability to a vulnerable CPE and nothing else satisfies it. The failure
+     is sub-typed by where the token *did* come from, so the report says how the
+     score got in: `FAIL-platform-only` is the CVE-2026-87886 shape arriving
+     through a `vulnerable: false` CPE; `FAIL-label-only` is the same shape
+     arriving through a CNA `affected` display label, which carries no
+     `vulnerable` flag at all; `FAIL-untraceable` is a token that matches no
+     surface on the item.
 
   2. **No two items share one CPE vendor+product pair.** The chosen items'
      `product_keys` are intersected pairwise.
@@ -90,10 +96,12 @@ def audit(chosen, all_ranked, limit: int) -> dict:
             verdict = "no-reach"          # reach 0, nothing to trace
         elif in_vuln:
             verdict = "ok-vulnerable-cpe"
-        elif in_label and not in_plat_only:
-            verdict = "ok-label-only"     # label with no CPE backing it
+        elif in_plat_only:
+            verdict = "FAIL-platform-only"   # the CVE-2026-87886 shape, via the CPE
+        elif in_label:
+            verdict = "FAIL-label-only"      # same shape, via an unflagged CNA label
         else:
-            verdict = "FAIL-platform-only"
+            verdict = "FAIL-untraceable"     # token matches no surface at all
 
         findings.append({
             "position": rank_pos,
@@ -144,9 +152,13 @@ def audit(chosen, all_ranked, limit: int) -> dict:
         kept += 1
 
     failures = [f for f in findings if f["verdict"].startswith("FAIL")]
+    verdicts: dict[str, int] = {}
+    for f in findings:
+        verdicts[f["verdict"]] = verdicts.get(f["verdict"], 0) + 1
     return {
         "generated_at": datetime.now(timezone.utc).isoformat(timespec="seconds"),
         "items": findings,
+        "verdict_counts": verdicts,
         "product_key_collisions": collisions,
         "cap_exercised": bool(dropped),
         "cap_dropped": dropped,
