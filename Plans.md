@@ -48,7 +48,10 @@ anything.
 Reach is scored on the same surface, for the same reason. Scoring it against
 `cpe_criteria` — the union of vulnerable and platform CPEs — gave
 CVE-2026-87886 (Acronis Backup) reach 100 through a `vulnerable: false`
-linux:linux_kernel entry, for software the CVE does not affect.
+linux:linux_kernel entry, for software the CVE does not affect. The display
+field `affected_products` is part of that surface, so `src/sources/nvd.py`
+labels a product only from a vulnerable CPE; labelling the platform too let it
+back onto the match surface through the display field.
 
 Rejected: KEV-only (goes silent for days), severity-only (CVSS is
 self-reported and inflated), fixed category slots (not enough daily candidates

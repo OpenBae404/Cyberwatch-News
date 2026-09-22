@@ -293,7 +293,11 @@ def _extract_products(
 
     Returns ``(products, vulnerable, platform)``:
 
-      * ``products``  -- human-readable "vendor product" labels, display only
+      * ``products``  -- human-readable "vendor product" labels, display only.
+                         Built from CNA-supplied `affected` rows and from
+                         VULNERABLE CPEs; a platform CPE never contributes one.
+                         The ranker reads this field, so a platform label here
+                         is a platform label on the match surface.
       * ``vulnerable`` -- cpeMatch entries NVD marks ``vulnerable: true``
       * ``platform``   -- every other CPE: the stack the vulnerable product runs
                           on, plus CNA-supplied CPEs that carry no flag at all
@@ -338,11 +342,16 @@ def _extract_products(
                 # on false. Absent means not vulnerable -- never assume otherwise.
                 if match.get("vulnerable") is True:
                     vulnerable.append(criteria)
+                    # Only a vulnerable CPE earns a product label. Labelling the
+                    # platform too put it back on the match surface through the
+                    # display field: CVE-2026-87886 (Acronis Backup) scored reach
+                    # 100 as "linux kernel" because its `vulnerable: false`
+                    # linux:linux_kernel CPE became an "affected product".
+                    label = _label(*_cpe_vendor_product(criteria))
+                    if label:
+                        products.append(label)
                 else:
                     platform.append(criteria)
-                label = _label(*_cpe_vendor_product(criteria))
-                if label:
-                    products.append(label)
 
     return (
         tuple(dict.fromkeys(products)),

@@ -745,5 +745,80 @@ class TestRankedItemPassthrough(unittest.TestCase):
         self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-9990", "CVE-2026-9991"])
 
 
+# --------------------------------------------------------------------------- #
+# the live defect, end to end through the real NVD parser
+# --------------------------------------------------------------------------- #
+
+def acronis_entry() -> dict[str, Any]:
+    """CVE-2026-87886 as NVD serves it: Acronis Backup on a Linux platform CPE.
+
+    Hand-built from the raw NVD 2.0 shape rather than a FakeItem, because the
+    bug this guards lived in `_extract_products`, not in the ranker: a fixture
+    that sets `affected_products` itself cannot see it.
+    """
+    return {"cve": {
+        "id": "CVE-2026-87886",
+        "published": "2026-09-20T00:00:00.000",
+        "lastModified": "2026-09-20T00:00:00.000",
+        "descriptions": [{"lang": "en", "value": "A flaw in the Acronis backup agent."}],
+        "metrics": {"cvssMetricV31": [{"cvssData": {
+            "baseSeverity": "HIGH", "baseScore": 7.8, "version": "3.1",
+            "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"}}]},
+        "configurations": [{"nodes": [{"cpeMatch": [
+            {"vulnerable": True,
+             "criteria": "cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*"},
+            {"vulnerable": False,
+             "criteria": "cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*"},
+        ]}]}],
+    }}
+
+
+class TestPlatformCpeReachEndToEnd(unittest.TestCase):
+    """The card's defect sentence, asserted through `parse_vulnerability`."""
+
+    def parsed(self) -> Any:
+        from src.sources.nvd import parse_vulnerability
+
+        item = parse_vulnerability(acronis_entry())
+        assert item is not None
+        return item
+
+    def test_a_platform_cpe_never_becomes_an_affected_product(self):
+        """`affected_products` is a display field the ranker reads -- keep it clean."""
+        self.assertEqual(self.parsed().affected_products, ("acronis backup",))
+
+    def test_the_split_still_records_the_platform_cpe_as_context(self):
+        item = self.parsed()
+        self.assertEqual(item.vulnerable_cpes,
+                         ("cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*",))
+        self.assertEqual(item.platform_cpes,
+                         ("cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*",))
+
+    def test_the_parsed_record_scores_no_reach_from_the_kernel(self):
+        """Was reach 100, match "linux kernel", for a bug that is not in Linux."""
+        ranked = rank_news([self.parsed()], None)[0]
+        self.assertEqual(ranked.reach, 0)
+        self.assertEqual(ranked.reach_match, "")
+
+    def test_a_vulnerable_cpe_still_scores_reach_through_the_parser(self):
+        """The fix removes a false positive; it must not remove the true ones."""
+        from src.sources.nvd import parse_vulnerability
+
+        entry = acronis_entry()
+        entry["cve"]["id"] = "CVE-2026-87887"
+        entry["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["criteria"] = (
+            "cpe:2.3:o:linux:linux_kernel:6.1:*:*:*:*:*:*:*"
+        )
+        item = parse_vulnerability(entry)
+        assert item is not None
+        ranked = rank_news([item], None)[0]
+        self.assertGreater(ranked.reach, 0)
+        self.assertEqual(ranked.reach_match, "linux kernel")
+
+    def test_the_product_key_comes_from_the_vulnerable_cpe_only(self):
+        ranked = rank_news([self.parsed()], None)[0]
+        self.assertEqual(ranked.product_keys, (("acronis", "backup"),))
+
+
 if __name__ == "__main__":
     unittest.main(verbosity=2)
