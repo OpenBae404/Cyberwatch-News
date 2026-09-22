@@ -23,6 +23,11 @@ bugs, it does not promote a LOW in Windows over a CRITICAL in nginx.
 Every returned item carries `reason` -- the sentence that says why it is in the
 issue. An item nobody can explain is an item that should not have been picked.
 
+After sorting, the issue keeps at most one item per CPE vendor+product pair:
+five CVEs in one product is a changelog, not an issue. That cap makes issues
+shorter, never longer -- padding the freed slot with an item the ranker already
+judged less worth knowing is how a newsletter starts lying.
+
 Deliberately out of scope: fetching (src/sources/), collapsing revisions
 (src/dedupe.py), wording and markdown (src/render.py). This module is a pure
 function over an already-deduped feed, so it stays inspectable and its tests
@@ -190,6 +195,10 @@ class RankedItem:
     reach_match: str = ""
     kev: Any = None                      # KevEntry when tier 1, else None
     reach_source: str = field(default="", repr=False)
+    # (vendor, product) of every CPE NVD marks vulnerable, lowercased. The key
+    # the one-per-product cap dedupes on; empty when the item names no
+    # vulnerable CPE, which exempts it from the cap entirely.
+    product_keys: tuple[tuple[str, str], ...] = ()
 
     @property
     def kev_listed(self) -> bool:
@@ -233,8 +242,8 @@ def rank_news(
     `reach` is the reach table, or a path to one; the file at
     `DEFAULT_REACH_FILE` is used when it is omitted.
 
-    Fewer than `limit` candidates returns fewer items. Padding an issue is how
-    a newsletter starts lying.
+    Fewer than `limit` candidates returns fewer items, and so does the
+    one-per-product cap. Padding an issue is how a newsletter starts lying.
     """
     if limit < 0:
         raise ValueError("limit must be >= 0")
@@ -243,7 +252,32 @@ def rank_news(
 
     ranked = [_rank_one(item, lookup, table) for item in items if item is not None]
     ranked.sort(key=_sort_key)
-    return ranked[:limit]
+    return _cap_one_per_product(ranked, limit)
+
+
+def _cap_one_per_product(ranked: Sequence[RankedItem], limit: int) -> list[RankedItem]:
+    """At most one item per CPE vendor+product pair, applied after sorting.
+
+    Five CVEs in one product is a changelog, not an issue, so once a product
+    has its slot the rest of its revisions are dropped and the issue ships
+    shorter. Ship short, never pad: the alternative is filling the gap with an
+    item the ranker already judged less worth knowing.
+
+    The keys come from `vulnerable_cpes` only, and an item with none has no
+    product key at all -- it is never capped against anything, because the
+    ranker cannot tell whether two unlabelled items are the same software.
+    """
+    chosen: list[RankedItem] = []
+    used: set[tuple[str, str]] = set()
+    for candidate in ranked:
+        if len(chosen) >= limit:
+            break
+        keys = candidate.product_keys
+        if keys and used.intersection(keys):
+            continue
+        used.update(keys)
+        chosen.append(candidate)
+    return chosen
 
 
 def severity_band(item: Any) -> tuple[str | None, int, float | None]:
@@ -278,6 +312,10 @@ def _rank_one(item: Any, lookup, table: ReachTable) -> RankedItem:
         reach_match=reach_match,
         kev=kev_entry,
         reach_source=table.source,
+        product_keys=tuple(
+            (vendor.lower(), product.lower())
+            for vendor, product in _vulnerable_vendor_products(item)
+        ),
     )
 
 
@@ -428,13 +466,16 @@ def _normalise(text: Any) -> str:
 def _reach_haystack(item: Any) -> str:
     """The text the reach tokens are matched against, space-padded for whole-word hits.
 
-    Product labels and the vendor/product fields of the item's CPEs -- never
-    the description. A description mentioning Windows in passing is not reach.
+    Product labels and the vendor/product fields of the item's VULNERABLE CPEs
+    -- never the description, and never a platform CPE. `src/sources/nvd.py`
+    splits the two: platform CPEs are "context, never a match surface". Scoring
+    reach against the union is how CVE-2026-87886 (Acronis Backup) scored reach
+    100 through a `vulnerable: false` linux:linux_kernel entry -- the Linux
+    kernel is what the agent runs on, not what the bug is in.
     """
     parts: list[str] = []
     parts.extend(_as_strings(_get(item, "affected_products", ())))
-    for criteria in _as_strings(_get(item, "cpe_criteria", ())):
-        vendor, product = _cpe_vendor_product(criteria)
+    for vendor, product in _vulnerable_vendor_products(item):
         if vendor:
             parts.append(vendor)
         if product:
@@ -465,6 +506,28 @@ def _cpe_vendor_product(criteria: str) -> tuple[str, str]:
     if len(parts) >= 5 and parts[0] == "cpe":
         return parts[3], parts[4]
     return "", ""
+
+
+def _vulnerable_vendor_products(item: Any) -> list[tuple[str, str]]:
+    """(vendor, product) for each CPE NVD marks vulnerable, in feed order.
+
+    Only `vulnerable_cpes` is read. An item that carries none -- a KEV row, a
+    mapping fixture, a CVE with no applicability data -- yields an empty list,
+    and both callers treat that as "no product known" rather than guessing one
+    from the platform CPEs.
+    """
+    pairs: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+    for criteria in _as_strings(_get(item, "vulnerable_cpes", ())):
+        vendor, product = _cpe_vendor_product(criteria)
+        if not vendor and not product:
+            continue
+        key = (vendor.lower(), product.lower())
+        if key in seen:
+            continue
+        seen.add(key)
+        pairs.append((vendor, product))
+    return pairs
 
 
 if __name__ == "__main__":  # manual smoke check against the live feeds
