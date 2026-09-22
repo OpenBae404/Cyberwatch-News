@@ -46,6 +46,8 @@ class FakeItem:
     cvss_severity: str | None = None
     cvss_score: float | None = None
     affected_products: tuple[str, ...] = ()
+    vulnerable_cpes: tuple[str, ...] = ()
+    platform_cpes: tuple[str, ...] = ()
     cpe_criteria: tuple[str, ...] = ()
     published: datetime | None = NOW
     description: str = ""
@@ -206,16 +208,36 @@ class TestWithinTierOrder(unittest.TestCase):
         )
         self.assertEqual([r.reach for r in ranked], [100, 90, 10])
 
-    def test_reach_matches_cpe_vendor_and_product(self):
-        """A CPE string is a reach signal even with no product label."""
+    def test_reach_matches_vulnerable_cpe_vendor_and_product(self):
+        """A vulnerable CPE is a reach signal even with no product label."""
         ranked = rank_news(
             [FakeItem("CVE-2026-6100", "HIGH", 7.0,
-                      cpe_criteria=("cpe:2.3:a:f5:nginx:1.25.0:*:*:*:*:*:*:*",))],
+                      vulnerable_cpes=("cpe:2.3:a:f5:nginx:1.25.0:*:*:*:*:*:*:*",))],
             None,
             reach=small_table(),
         )
         self.assertEqual(ranked[0].reach, 90)
         self.assertEqual(ranked[0].reach_match, "nginx")
+
+    def test_platform_cpes_are_not_a_reach_surface(self):
+        """The live defect: a `vulnerable: false` CPE must not score reach.
+
+        CVE-2026-87886 (Acronis Backup) carries a platform linux:linux_kernel
+        CPE. The kernel is what the agent runs on, not what the bug is in, so
+        it scored reach 100 for software the CVE does not affect.
+        """
+        acronis = FakeItem(
+            "CVE-2026-87886", "HIGH", 7.8,
+            vulnerable_cpes=("cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*",),
+            platform_cpes=("cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",),
+            cpe_criteria=(
+                "cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*",
+                "cpe:2.3:o:microsoft:windows:-:*:*:*:*:*:*:*",
+            ),
+        )
+        ranked = rank_news([acronis], None, reach=small_table())
+        self.assertEqual(ranked[0].reach, 0)
+        self.assertEqual(ranked[0].reach_match, "")
 
     def test_reach_ignores_the_description(self):
         """"Also affects Windows" in prose is not reach -- only product data is."""
@@ -325,6 +347,142 @@ class TestIssueSize(unittest.TestCase):
         self.assertEqual(len(ranked), 5)
         self.assertEqual(ranked[0].cve_id, "CVE-2026-9404")
         self.assertEqual([r.tier for r in ranked[1:]], [FALLBACK_TIER] * 4)
+
+
+# --------------------------------------------------------------------------- #
+# one item per product
+# --------------------------------------------------------------------------- #
+
+def cpe(vendor: str, product: str) -> str:
+    return f"cpe:2.3:a:{vendor}:{product}:1.0:*:*:*:*:*:*:*"
+
+
+class TestOneItemPerProduct(unittest.TestCase):
+    """One item per CPE vendor+product pair. Ship short, never pad."""
+
+    def test_three_products_return_three_items_not_five(self):
+        """A feed of revisions in three products is a three-item issue."""
+        items = []
+        for n, (vendor, product) in enumerate(
+            [("f5", "nginx"), ("f5", "nginx"), ("jenkins", "jenkins"),
+             ("jenkins", "jenkins"), ("microsoft", "windows"),
+             ("microsoft", "windows"), ("microsoft", "windows")]
+        ):
+            items.append(
+                FakeItem(f"CVE-2026-95{n:02d}", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe(vendor, product),))
+            )
+        ranked = rank_news(items, None, reach=small_table())
+        self.assertEqual(len(ranked), 3)
+        self.assertEqual(
+            sorted(r.product_keys[0] for r in ranked),
+            [("f5", "nginx"), ("jenkins", "jenkins"), ("microsoft", "windows")],
+        )
+
+    def test_one_vendor_two_products_both_survive(self):
+        """The key is vendor AND product -- Microsoft is not one slot."""
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9601", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("microsoft", "windows"),)),
+                FakeItem("CVE-2026-9602", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("microsoft", "exchange_server"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(
+            [r.cve_id for r in ranked], ["CVE-2026-9601", "CVE-2026-9602"]
+        )
+
+    def test_items_with_no_vulnerable_cpe_are_never_capped(self):
+        """No vulnerable CPE, no product key: the ranker cannot tell them apart."""
+        items = [FakeItem(f"CVE-2026-97{n:02d}", "HIGH", 7.0) for n in range(5)]
+        ranked = rank_news(items, None, reach=small_table())
+        self.assertEqual(len(ranked), 5)
+        self.assertTrue(all(r.product_keys == () for r in ranked))
+
+    def test_a_platform_cpe_does_not_create_a_product_key(self):
+        """Two unrelated CVEs sharing a platform CPE must both ship."""
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9801", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("acronis", "backup"),),
+                         platform_cpes=(cpe("linux", "linux_kernel"),)),
+                FakeItem("CVE-2026-9802", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("veeam", "backup"),),
+                         platform_cpes=(cpe("linux", "linux_kernel"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(len(ranked), 2)
+
+    def test_the_cap_keeps_the_better_ranked_item(self):
+        """Dropping a duplicate must never drop the stronger one."""
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9901", "LOW", 2.0,
+                         vulnerable_cpes=(cpe("f5", "nginx"),)),
+                FakeItem("CVE-2026-9902", "CRITICAL", 9.8,
+                         vulnerable_cpes=(cpe("f5", "nginx"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-9902"])
+
+    def test_the_cap_applies_across_tiers(self):
+        """A KEV item claims the product slot; the tier-2 revision is dropped."""
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9911", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("f5", "nginx"),)),
+                FakeItem("CVE-2026-9912", "MEDIUM", 5.0,
+                         vulnerable_cpes=(cpe("f5", "nginx"),)),
+            ],
+            kev_catalog(FakeKevEntry("CVE-2026-9912", "F5", "nginx")),
+            reach=small_table(),
+        )
+        self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-9912"])
+
+    def test_the_cap_is_case_insensitive(self):
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9921", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("F5", "NGINX"),)),
+                FakeItem("CVE-2026-9922", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("f5", "nginx"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(len(ranked), 1)
+
+    def test_an_item_naming_several_products_claims_all_of_them(self):
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-9931", "CRITICAL", 9.0,
+                         vulnerable_cpes=(cpe("f5", "nginx"), cpe("jenkins", "jenkins"))),
+                FakeItem("CVE-2026-9932", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("jenkins", "jenkins"),)),
+                FakeItem("CVE-2026-9933", "HIGH", 7.0,
+                         vulnerable_cpes=(cpe("microsoft", "windows"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(
+            [r.cve_id for r in ranked], ["CVE-2026-9931", "CVE-2026-9933"]
+        )
+
+    def test_the_cap_never_exceeds_the_issue_limit(self):
+        items = [
+            FakeItem(f"CVE-2026-9{n:03d}", "HIGH", 7.0,
+                     vulnerable_cpes=(cpe(f"vendor{n}", f"product{n}"),))
+            for n in range(20)
+        ]
+        self.assertEqual(len(rank_news(items, None, reach=small_table())), MAX_ITEMS)
 
 
 # --------------------------------------------------------------------------- #
@@ -490,7 +648,7 @@ class TestReachTable(unittest.TestCase):
         path = self._write("100 internet explorer\n")
         table = load_reach_table(path)
         weight, token = table.score(
-            FakeItem("CVE-3", cpe_criteria=("cpe:2.3:a:microsoft:internet_explorer:11:*:*:*:*:*:*:*",))
+            FakeItem("CVE-3", vulnerable_cpes=("cpe:2.3:a:microsoft:internet_explorer:11:*:*:*:*:*:*:*",))
         )
         self.assertEqual((weight, token), (100, "internet explorer"))
 
@@ -585,6 +743,81 @@ class TestRankedItemPassthrough(unittest.TestCase):
         ])
         ranked = rank_news(feed.items, None, reach=small_table())
         self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-9990", "CVE-2026-9991"])
+
+
+# --------------------------------------------------------------------------- #
+# the live defect, end to end through the real NVD parser
+# --------------------------------------------------------------------------- #
+
+def acronis_entry() -> dict[str, Any]:
+    """CVE-2026-87886 as NVD serves it: Acronis Backup on a Linux platform CPE.
+
+    Hand-built from the raw NVD 2.0 shape rather than a FakeItem, because the
+    bug this guards lived in `_extract_products`, not in the ranker: a fixture
+    that sets `affected_products` itself cannot see it.
+    """
+    return {"cve": {
+        "id": "CVE-2026-87886",
+        "published": "2026-09-20T00:00:00.000",
+        "lastModified": "2026-09-20T00:00:00.000",
+        "descriptions": [{"lang": "en", "value": "A flaw in the Acronis backup agent."}],
+        "metrics": {"cvssMetricV31": [{"cvssData": {
+            "baseSeverity": "HIGH", "baseScore": 7.8, "version": "3.1",
+            "vectorString": "CVSS:3.1/AV:L/AC:L/PR:L/UI:N/S:U/C:H/I:H/A:H"}}]},
+        "configurations": [{"nodes": [{"cpeMatch": [
+            {"vulnerable": True,
+             "criteria": "cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*"},
+            {"vulnerable": False,
+             "criteria": "cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*"},
+        ]}]}],
+    }}
+
+
+class TestPlatformCpeReachEndToEnd(unittest.TestCase):
+    """The card's defect sentence, asserted through `parse_vulnerability`."""
+
+    def parsed(self) -> Any:
+        from src.sources.nvd import parse_vulnerability
+
+        item = parse_vulnerability(acronis_entry())
+        assert item is not None
+        return item
+
+    def test_a_platform_cpe_never_becomes_an_affected_product(self):
+        """`affected_products` is a display field the ranker reads -- keep it clean."""
+        self.assertEqual(self.parsed().affected_products, ("acronis backup",))
+
+    def test_the_split_still_records_the_platform_cpe_as_context(self):
+        item = self.parsed()
+        self.assertEqual(item.vulnerable_cpes,
+                         ("cpe:2.3:a:acronis:backup:12.5:*:*:*:*:*:*:*",))
+        self.assertEqual(item.platform_cpes,
+                         ("cpe:2.3:o:linux:linux_kernel:-:*:*:*:*:*:*:*",))
+
+    def test_the_parsed_record_scores_no_reach_from_the_kernel(self):
+        """Was reach 100, match "linux kernel", for a bug that is not in Linux."""
+        ranked = rank_news([self.parsed()], None)[0]
+        self.assertEqual(ranked.reach, 0)
+        self.assertEqual(ranked.reach_match, "")
+
+    def test_a_vulnerable_cpe_still_scores_reach_through_the_parser(self):
+        """The fix removes a false positive; it must not remove the true ones."""
+        from src.sources.nvd import parse_vulnerability
+
+        entry = acronis_entry()
+        entry["cve"]["id"] = "CVE-2026-87887"
+        entry["cve"]["configurations"][0]["nodes"][0]["cpeMatch"][0]["criteria"] = (
+            "cpe:2.3:o:linux:linux_kernel:6.1:*:*:*:*:*:*:*"
+        )
+        item = parse_vulnerability(entry)
+        assert item is not None
+        ranked = rank_news([item], None)[0]
+        self.assertGreater(ranked.reach, 0)
+        self.assertEqual(ranked.reach_match, "linux kernel")
+
+    def test_the_product_key_comes_from_the_vulnerable_cpe_only(self):
+        ranked = rank_news([self.parsed()], None)[0]
+        self.assertEqual(ranked.product_keys, (("acronis", "backup"),))
 
 
 if __name__ == "__main__":
