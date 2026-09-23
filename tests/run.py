@@ -41,6 +41,11 @@ The suite is two kinds of test:
                                             a dated issue is written, a KEV
                                             outage exits non-zero and writes
                                             nothing, the window is never lastMod
+           - tests/test_kev_scored_diff.py  the reach-change audit can return
+                                            both verdicts: a product the table
+                                            still prices losing its score is a
+                                            regression, a vendor wildcard
+                                            losing one is not
            - tools/mutation_check.py        breaks src/rank.py and checks the
                                             control goes red
 
@@ -86,6 +91,13 @@ OFFLINE = [
     # In the suite because an instrument that cannot say no is not evidence.
     ("audit: the live reach audit can fail",
      ["-m", "unittest", "tests.test_live_reach_audit", "-v"]),
+    # The same standard for the instrument that grades the reach CHANGE rather
+    # than one issue: kev_scored_diff.py decides whether a lost score is the
+    # narrowing working or software quietly losing a weight the table still
+    # prices. Both verdicts are exercised on crafted pairs, including the
+    # false positive the predicate actually produced once.
+    ("audit: the reach-change diff can fail",
+     ["-m", "unittest", "tests.test_kev_scored_diff", "-v"]),
     # Breaks the KEV-outage guard four ways on a throwaway copy and asserts the
     # entrypoint tests go red each time. In the suite on purpose: the guard's
     # whole job is to prevent a run that otherwise looks healthy, so a test
