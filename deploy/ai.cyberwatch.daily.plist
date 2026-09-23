@@ -35,6 +35,14 @@
          move without a commit. -->
     <key>CYBERWATCH_LLM_BASE_URL</key>
     <string>http://localhost:8001/v1</string>
+    <!-- Pushing is OFF. The runner only pushes when CYBERWATCH_PUBLISH is
+         exactly "1", and a configured git remote does not turn it on by
+         itself. An unattended job that publishes every morning publishes the
+         first mistake nobody reviewed, so this stays absent until the repo is
+         public, the audit is clean, and that trade is wanted. At that point
+         add a CYBERWATCH_PUBLISH key here with the string value 1.
+         Without it the daily run still builds, rebuilds the site and commits;
+         only the push waits for a human. -->
   </dict>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>

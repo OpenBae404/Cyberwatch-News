@@ -81,6 +81,26 @@ which builds the issue, regenerates the site, and commits `issues/` and `docs/`
 only. Edit the absolute paths in the plist if the checkout is not at
 `/Users/YOURNAME/Projects/cyberwatch-news`; launchd does not expand variables.
 
+Nothing in this repo installs the agent -- the `cp` and `launchctl` lines above
+are the only way it gets scheduled, and a test asserts no tracked file executes
+them. Cloning or testing this repo never touches your machine's launchd.
+
+**The daily run does not push.** It builds, rebuilds and commits locally; the
+push happens only when `CYBERWATCH_PUBLISH=1` is in the plist's
+`EnvironmentVariables`, and adding a git remote does **not** turn it on by
+itself. An unattended morning push publishes the first mistake nobody reviewed,
+so the commit waits for a human until you decide otherwise. Exit codes of the
+runner: `2` KEV outage, `3` NVD failure, `4` nothing to ship, `5` the site
+generator refused, `6` the commit failed, `7` the push failed, `8` publishing
+was on with no remote configured. A quiet day -- a rebuild that changes no byte
+-- exits `0` and commits nothing.
+
+`tests/test_daily_run.py` runs the real script against stub stages in a
+throwaway repo with a recording `git` and a real bare remote, so "no push was
+attempted" is a fact about the recorded `git` argv rather than an absent side
+effect; `tools/mutation_daily_check.py` breaks the runner eight ways and checks
+those tests go red each time.
+
 ### Before making the repo public
 
     python3 tools/public_repo_audit.py

@@ -122,6 +122,21 @@ OFFLINE = [
     # not be allowlistable.
     ("publish: the public-repo audit can say no, and the plist parses",
      ["-m", "unittest", "tests.test_publish", "-v"]),
+    # The daily run itself, executed rather than grepped: the real shell script
+    # against stub stages in a throwaway repo, with a recording `git` on PATH
+    # and a real bare remote. Its three guarantees are all about what it does
+    # NOT do -- no commit on a feed outage, no commit on a quiet day, no push
+    # unless CYBERWATCH_PUBLISH=1 -- and "no push happened" is equally true of a
+    # script that cannot push at all, so the gate is also seen open once.
+    ("daily: the unattended run commits narrowly and never publishes by itself",
+     ["-m", "unittest", "tests.test_daily_run", "-v"]),
+    # Breaks the runner eight ways on a throwaway copy -- push whenever a
+    # remote exists (what it did before this card), publish by default, ignore
+    # a feed outage, stage the whole tree -- and asserts tests/test_daily_run.py
+    # goes red each time. The first mutant is the reason this exists: a suite
+    # with no configured remote stays green under it.
+    ("mutation: the daily run's refusals are load-bearing",
+     ["tools/mutation_daily_check.py"]),
     # Breaks the KEV-outage guard four ways on a throwaway copy and asserts the
     # entrypoint tests go red each time. In the suite on purpose: the guard's
     # whole job is to prevent a run that otherwise looks healthy, so a test
