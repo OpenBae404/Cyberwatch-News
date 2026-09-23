@@ -34,7 +34,9 @@ The suite is two kinds of test:
                                             its lookup and its error contract
            - tests/test_news_rank.py        the two-tier selection: KEV outranks
                                             severity, severity outranks reach,
-                                            cap of five, quiet-KEV day still ships
+                                            cap of five, quiet-KEV day still ships,
+                                            and reach matched at the HEAD of a
+                                            product name, per vendor
            - tests/test_run_entrypoint.py   run.py end to end on stubbed feeds:
                                             a dated issue is written, a KEV
                                             outage exits non-zero and writes
@@ -90,6 +92,13 @@ OFFLINE = [
     # nobody has watched fail is not evidence.
     ("mutation: the KEV-outage guard is load-bearing",
      ["tools/mutation_entrypoint_check.py"]),
+    # Breaks the head-anchored reach rule three ways on a throwaway copy --
+    # match anywhere in the name, stop mid-word, ignore the vendor scope --
+    # and asserts tests/test_news_rank.py goes red each time. Those three ARE
+    # the substring behaviour this card replaced, so a suite that stays green
+    # under them is not holding the fix.
+    ("mutation: the reach match rule is load-bearing",
+     ["tools/mutation_reach_check.py"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.
