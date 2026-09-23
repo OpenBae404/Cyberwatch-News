@@ -61,6 +61,7 @@ internal host|deploy/ai.cyberwatch.daily.plist       # the LLM endpoint, as an e
 internal host|deploy/audit-allowlist.txt   # quotes the accepted hosts
 email address|deploy/audit-allowlist.txt   # quotes the accepted address
 internal host|tests/test_publish.py        # hosts planted to make the audit fail
+internal host|tests/test_daily_run.py      # test@localhost, the throwaway repo's git identity
 email address|tests/test_publish.py        # an address planted for the same reason
 absolute home path|tests/test_publish.py   # a path planted for the same reason
 absolute home path|README.md               # the install command's plist path
