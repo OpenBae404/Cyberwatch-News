@@ -1,0 +1,55 @@
+{
+  "_comment": [
+    "A crafted issue the live reach audit MUST reject, replayed with",
+    "`python3 tools/live_reach_audit.py --replay tests/fixtures/audit_false_positive.json`.",
+    "",
+    "Item 1 is honest: reach 100 traced to a CPE NVD marks vulnerable.",
+    "Item 2 is the false positive. It carries reach 56 through the token",
+    "'big ip', which appears nowhere except the CNA display label 'F5 BIG-IP'",
+    "-- no CPE of either kind vouches for it. That is the exact shape the",
+    "first acceptance criterion forbids, and the audit must call it",
+    "FAIL-label-only, report pass:false and exit 1.",
+    "",
+    "Item 3 is the same failure arriving the other way, through a CPE the feed",
+    "marks vulnerable:false (platform), i.e. the CVE-2026-87886 Acronis shape:",
+    "the Linux kernel is what the agent runs on, not what the bug is in."
+  ],
+  "chosen": [
+    {
+      "cve_id": "CVE-2025-39682",
+      "tier": 1,
+      "severity": "CRITICAL",
+      "cvss_score": 9.8,
+      "reach": 100,
+      "reach_match": "linux kernel",
+      "vulnerable_cpes": ["cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*"],
+      "platform_cpes": [],
+      "affected_products": ["Linux Linux Kernel"],
+      "product_keys": [["linux", "linux_kernel"]]
+    },
+    {
+      "cve_id": "CVE-2026-94127",
+      "tier": 1,
+      "severity": "CRITICAL",
+      "cvss_score": 9.6,
+      "reach": 56,
+      "reach_match": "big ip",
+      "vulnerable_cpes": [],
+      "platform_cpes": [],
+      "affected_products": ["F5 BIG-IP"],
+      "product_keys": [["f5", "big ip"]]
+    },
+    {
+      "cve_id": "CVE-2026-87886",
+      "tier": 2,
+      "severity": "HIGH",
+      "cvss_score": 8.8,
+      "reach": 100,
+      "reach_match": "linux kernel",
+      "vulnerable_cpes": ["cpe:2.3:a:acronis:acronis_backup:*:*:*:*:*:*:*:*"],
+      "platform_cpes": ["cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*"],
+      "affected_products": ["Acronis Acronis Backup"],
+      "product_keys": [["acronis", "acronis_backup"]]
+    }
+  ]
+}

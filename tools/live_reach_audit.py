@@ -30,6 +30,14 @@ was dropped does not test the cap; it only shows the cap did no harm.
 
 No LLM is involved: this audits selection, not prose. The issue itself is
 written by `run.py`; this is a second, independent read of the same feeds.
+
+`--replay PATH` audits items from a JSON file instead of the live feeds. It
+exists because the pass rule and the exit code are the whole value of this
+tool, and a live run only ever demonstrates them when the feeds happen to
+contain a failing shape. `tests/fixtures/audit_false_positive.json` is a
+crafted one: a reach figure whose token appears only on a CNA display label,
+which is the shape the criterion forbids. Replaying it must print
+`"pass": false` and exit 1.
 """
 
 from __future__ import annotations
@@ -86,7 +94,13 @@ def audit(chosen, all_ranked, limit: int) -> dict:
         plat_surface = _cpe_surface(platform)
         label_surface = _surface(labels)
 
-        token = item.reach_match
+        # The token arrives from the reach file verbatim ("big-ip"); every
+        # surface above has been through `_normalise` ("big ip"). Comparing the
+        # two without normalising the token makes any hyphenated or punctuated
+        # token untraceable on every surface, so the audit reports a
+        # FAIL-untraceable for a reach figure that is in fact sitting in the
+        # vulnerable CPE. Normalise both sides or the instrument invents faults.
+        token = _normalise(item.reach_match) if item.reach_match else ""
         padded = f" {token} " if token else ""
         in_vuln = bool(token) and padded in vuln_surface
         in_label = bool(token) and padded in label_surface
@@ -167,11 +181,52 @@ def audit(chosen, all_ranked, limit: int) -> dict:
     }
 
 
+class ReplayItem:
+    """A ranked item rebuilt from JSON, carrying only what `audit()` reads.
+
+    `--replay` exists so the audit's own pass rule can be exercised end to end,
+    exit code included, without waiting for the live feeds to happen to contain
+    a failing shape. An instrument that has never been seen to return non-zero
+    on real invocation is an instrument nobody has tested.
+    """
+
+    def __init__(self, blob):
+        self.cve_id = blob.get("cve_id", "CVE-0000-0000")
+        self.reach = int(blob.get("reach", 0))
+        self.reach_match = blob.get("reach_match", "")
+        self.vulnerable_cpes = list(blob.get("vulnerable_cpes", ()))
+        self.platform_cpes = list(blob.get("platform_cpes", ()))
+        self.affected_products = list(blob.get("affected_products", ()))
+        self.product_keys = tuple(tuple(k) for k in blob.get("product_keys", ()))
+        self.tier = blob.get("tier", 1)
+        self.severity = blob.get("severity", "CRITICAL")
+        self.cvss_score = blob.get("cvss_score", 9.8)
+
+
 def main(argv=None) -> int:
     parser = argparse.ArgumentParser(prog="live_reach_audit.py")
     parser.add_argument("--json", default=None, help="also write the report as JSON")
     parser.add_argument("--max-items", type=int, default=MAX_ITEMS)
+    parser.add_argument(
+        "--replay", default=None,
+        help="audit items from a JSON list instead of the live feeds "
+             "(a list of objects, or {chosen: [...], ranked: [...]})",
+    )
     args = parser.parse_args(argv)
+
+    if args.replay:
+        blob = json.loads(Path(args.replay).read_text(encoding="utf-8"))
+        chosen_blobs = blob["chosen"] if isinstance(blob, dict) else blob
+        ranked_blobs = blob.get("ranked", chosen_blobs) if isinstance(blob, dict) else blob
+        chosen = [ReplayItem(b) for b in chosen_blobs]
+        all_ranked = [ReplayItem(b) for b in ranked_blobs]
+        report = audit(chosen, all_ranked, args.max_items)
+        report["feed"] = {"replayed_from": args.replay, "chosen": len(chosen)}
+        text = json.dumps(report, indent=2, sort_keys=False)
+        print(text)
+        if args.json:
+            Path(args.json).write_text(text + "\n", encoding="utf-8")
+        return 0 if report["pass"] else 1
 
     catalog = load_kev()
     kev_items, kev_recent = collect_kev_candidates(catalog)

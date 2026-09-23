@@ -15,8 +15,12 @@ No network: `audit()` is a pure function over already-ranked items.
 
 from __future__ import annotations
 
+import contextlib
 import importlib.util
+import io
+import json
 import sys
+import tempfile
 import unittest
 from pathlib import Path
 
@@ -73,6 +77,36 @@ class TestVerdicts(unittest.TestCase):
         report = one(item)
         self.assertEqual(report["items"][0]["verdict"], "no-reach")
         self.assertTrue(report["pass"])
+
+    def test_reach_token_keeps_its_file_punctuation_and_still_traces(self):
+        """The reach file's token is `big-ip`; CPE surfaces read `big ip`.
+
+        Every other test here hands `audit()` a token that is already in
+        normalised form, so none of them can see the instrument comparing a
+        raw token against a normalised surface. On the live feed that mismatch
+        turned a reach figure sitting plainly in the vulnerable CPE into
+        FAIL-untraceable -- a fault the audit invented, not one it found.
+        """
+        item = FakeItem(
+            "CVE-2026-94127", 56, "big-ip",
+            vulnerable=["cpe:2.3:a:f5:big-ip_access_policy_manager:*:*:*:*:*:*:*:*"],
+            labels=["F5 BIG-IP Access Policy Manager"],
+            product_keys=[("f5", "big-ip_access_policy_manager")],
+        )
+        report = one(item)
+        self.assertEqual(report["items"][0]["verdict"], "ok-vulnerable-cpe")
+        self.assertTrue(report["pass"])
+
+    def test_a_punctuated_token_can_still_fail(self):
+        """Normalising the token must not turn the check into a rubber stamp."""
+        item = FakeItem(
+            "CVE-2026-94127", 56, "big-ip",
+            vulnerable=["cpe:2.3:a:acronis:acronis_backup:*:*:*:*:*:*:*:*"],
+            labels=["F5 BIG-IP"],
+        )
+        report = one(item)
+        self.assertEqual(report["items"][0]["verdict"], "FAIL-label-only")
+        self.assertFalse(report["pass"])
 
     def test_reach_from_platform_cpe_fails(self):
         """CVE-2026-87886's shape: reach scored off a vulnerable:false CPE."""
@@ -136,6 +170,61 @@ class TestProductKeyRule(unittest.TestCase):
         self.assertTrue(report["cap_exercised"])
         self.assertEqual(report["cap_dropped"][0]["cve_id"], "CVE-B")
         self.assertTrue(report["pass"])
+
+
+class TestTheCraftedFalsePositive(unittest.TestCase):
+    """The shipped fixture must still be a false positive the audit rejects.
+
+    `tests/fixtures/audit_false_positive.json` is what the acceptance
+    criterion "the audit exits non-zero when fed a crafted false positive" is
+    demonstrated with. If someone softens the fixture -- gives the F5 item a
+    vulnerable CPE, say -- the demonstration silently becomes a pass on a
+    clean input and proves nothing. These tests pin the fixture's shape and
+    the exit code it produces, through `main()`, not through `audit()`.
+    """
+
+    FIXTURE = ROOT / "tests" / "fixtures" / "audit_false_positive.json"
+
+    def test_the_fixture_exists_and_carries_an_untraceable_reach_figure(self):
+        blob = json.loads(self.FIXTURE.read_text(encoding="utf-8"))
+        offenders = [
+            item for item in blob["chosen"]
+            if item["reach"] and not item["vulnerable_cpes"]
+        ]
+        self.assertTrue(
+            offenders,
+            "the fixture no longer contains an item scoring reach with no "
+            "vulnerable CPE, so it can no longer demonstrate a rejection",
+        )
+
+    def test_replaying_the_fixture_exits_non_zero(self):
+        buffer = io.StringIO()
+        with contextlib.redirect_stdout(buffer):
+            code = live_reach_audit.main(["--replay", str(self.FIXTURE)])
+        self.assertEqual(code, 1)
+        report = json.loads(buffer.getvalue())
+        self.assertFalse(report["pass"])
+        verdicts = {i["cve_id"]: i["verdict"] for i in report["items"]}
+        self.assertEqual(verdicts["CVE-2026-94127"], "FAIL-label-only")
+        self.assertEqual(verdicts["CVE-2026-87886"], "FAIL-platform-only")
+        self.assertEqual(verdicts["CVE-2025-39682"], "ok-vulnerable-cpe")
+
+    def test_replaying_a_clean_issue_exits_zero(self):
+        """The exit code has to be able to say yes as well, or it says nothing."""
+        clean = [{
+            "cve_id": "CVE-2025-39682", "reach": 100, "reach_match": "linux kernel",
+            "vulnerable_cpes": ["cpe:2.3:o:linux:linux_kernel:*:*:*:*:*:*:*:*"],
+            "affected_products": ["Linux Linux Kernel"],
+            "product_keys": [["linux", "linux_kernel"]],
+        }]
+        with tempfile.TemporaryDirectory() as tmp:
+            path = Path(tmp) / "clean.json"
+            path.write_text(json.dumps(clean), encoding="utf-8")
+            buffer = io.StringIO()
+            with contextlib.redirect_stdout(buffer):
+                code = live_reach_audit.main(["--replay", str(path)])
+        self.assertEqual(code, 0)
+        self.assertTrue(json.loads(buffer.getvalue())["pass"])
 
 
 if __name__ == "__main__":
