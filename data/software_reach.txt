@@ -9,12 +9,77 @@
 # readers run this", it does not belong.
 #
 # FORMAT
-#   <weight>  <token>            # trailing comment optional
+#   <weight>  <token>[, <token>...]    # trailing comment optional
 #   weight  0-100, higher = more readers affected
-#   token   matched case-insensitively as a whole word against the item's
-#           affected-product labels and against the vendor/product fields of
-#           its CPEs. Underscores in CPE names are read as spaces, so
-#           "internet explorer" matches cpe ...:internet_explorer:...
+#   token   a product, a vendor or a brand -- see the two sections below
+#
+#   Several tokens on ONE line are spellings of ONE reach claim: "edge,
+#   microsoft edge", "log4j, log4j2", "iphone os, apple/ios". They share the
+#   line because they share the weight. Every weight in this file is the
+#   ranker's tie-break scale and was argued for elsewhere; a change to HOW
+#   tokens match adds spellings to existing weights and never invents a new
+#   one, so the weight column of this file is diff-proof.
+#
+# HOW A PRODUCT TOKEN MATCHES
+#   Case-insensitively, against the PRODUCT names the feed states for an item,
+#   from the START of the name at a word boundary. "windows" matches "Windows
+#   Server 2019" and "exchange" matches "Exchange Server", because a product
+#   name is written head-first: the software, then the edition or platform.
+#   Two things are refused:
+#     * a word in the MIDDLE -- "Fortinet FortiPAM Chrome Extension" is a
+#       FortiPAM thing, not Chrome, and scoring it 98 as "chrome" is one of
+#       the two defects this rule replaces;
+#     * a match that stops inside a word -- "Net-IDN-Encode" is a Perl module
+#       and not Microsoft ".NET", "nginx-ignition" is not nginx. A hyphen or a
+#       dot binds; a space, an underscore, a comma, a slash or a pipe
+#       separates, so "internet_explorer" and "iOS, iPadOS, and macOS" still
+#       read as lists of words.
+#   A token may also be written "vendor product" ("google chrome", "linux
+#   kernel") and then matches the vendor-qualified spelling of the name.
+#
+#   A feed splits a name across its two fields wherever it likes: KEV writes
+#   WordPress core as "WordPress / Core" and PHP's FPM as "PHP / FastCGI
+#   Process Manager". So a product token that is exactly the VENDOR word of a
+#   row matches that row -- "wordpress" scores "WordPress / Core" at 41 --
+#   unless this file also writes that name as a vendor: or brand: line, which
+#   is this file saying the name is a company and not software. That is what
+#   keeps "Fortinet / FortiWeb Cloud Connector" and "Red Hat / Build of
+#   Keycloak" unrated: fortinet and red hat are vendor: lines here.
+#
+# A COMPANY IS NOT SOFTWARE -- vendor:, brand: and <vendor>/<product>
+#   "cisco" as a plain token would lead every product name Cisco ships, so a
+#   Cisco IP camera would carry IOS's 60. That is the same over-reach one
+#   level up, and it is why every company in this file is written one of two
+#   ways. The test is one question: if this token may lead a product name, is
+#   the weight honest for EVERY name it can lead?
+#
+#     vendor:<name>   No -- the catalogue runs from the core of the internet
+#                     down to a webcam. It then scores ONLY a row that names
+#                     no product at all ("Apple / Multiple Products", 53 rows
+#                     in the live CISA KEV catalogue) -- real, very wide items
+#                     that would otherwise be unrated. It never scores a named
+#                     product, so "Red Hat Build of Keycloak" is not 79 and
+#                     "Fortinet FortiWeb Cloud Connector" is not 62.
+#
+#     brand:<name>    Yes, because the weight is already set at the level of
+#                     the vendor's WEAKEST product. It then scores every row
+#                     that vendor files, named or not, so a router model this
+#                     table has never heard of still scores. "d-link" is 26
+#                     because one household runs each piece of D-Link kit and
+#                     that is true of every D-Link box. "cisco" can never be a
+#                     brand: 60 is IOS-scale and a Cisco webcam is not.
+#
+#     <vendor>/<name> A product token that only means this software under this
+#                     vendor. Cisco IOS is a router OS and Apple iOS is a
+#                     phone OS; an unscoped "ios" hands every row of one to
+#                     the other's weight.
+#
+#   A named product that is not listed here scores 0 -- UNRATED, not zero
+#   reach. Some genuinely wide software is in that position today (Tomcat and
+#   Struts under vendor:apache, Thunderbird under vendor:mozilla): they used
+#   to score their vendor's weight through the old substring rule, which was
+#   never a measurement of them. Naming them costs a weight this file cannot
+#   invent under a matching change, so it is a table decision, not this one.
 #
 # A CVE scores the highest weight of any token it matches. No match scores 0 --
 # unknown reach, not zero reach, and it only ever loses a tie.
@@ -26,32 +91,62 @@
 100  linux kernel
 98   chrome
 98   google chrome
-97   android
+97   android, brand:android   # "Android 14" as a name, and the OS components
+                              # KEV files under the Android vendor itself
+                              # ("Android / Framework"). Every row that vendor
+                              # files IS the mobile OS, which is what makes it
+                              # a brand and not a vendor line. It is the one
+                              # name written both ways; both are 97, so the
+                              # brand line simply does the vendor-word work the
+                              # product token is not allowed to do here.
 96   openssl
-95   iphone os              # the CPE spelling; plain "ios" would eat Cisco IOS
-95   apple
-94   macos
+95   iphone os, apple/ios, apple/ipados   # three spellings of Apple's phone
+                              # OS: the CPE name, and the KEV names scoped to
+                              # Apple because Cisco's IOS below is an
+                              # unrelated router OS at 60.
+95   vendor:apple             # KEV files 53 rows as "Apple / Multiple
+                              # Products", a real and very wide item. Named
+                              # Apple software scores on its own line (macos,
+                              # safari, ios) -- "Apple Xcode Server" is not 95.
+94   macos, os x              # what Apple called macOS before 2016; KEV still
+                              # files old Apple rows under that name
 93   safari
 92   edge
-92   microsoft edge
+92   microsoft edge, internet explorer   # KEV files them as one row
+                              # ("Internet Explorer and Edge") and IE still
+                              # ships inside Windows
 90   firefox
-90   mozilla
+90   vendor:mozilla           # a "Mozilla / Multiple Products" row. Named
+                              # Mozilla software other than Firefox is not in
+                              # this table and scores unrated -- see the
+                              # header; it is not 90 by virtue of the vendor.
 
 # --- server software a majority of hosting depends on -------------------- #
 88   openssh
 88   ssh
-86   apache
-86   http server
+86   vendor:apache            # the FOUNDATION, not the web server: Apache
+                              # publishes hundreds of projects, most of them
+                              # niche (MINA, Neethi). Only a row naming no
+                              # product scores here.
+86   http server              # "Apache HTTP Server", and httpd under any label
 85   nginx
 84   php
 83   mysql
 83   mariadb
 82   postgresql
 80   openbsd
-80   debian
-80   ubuntu
-79   red hat
-79   rhel
+80   debian linux, vendor:debian   # the distribution as the CPE names it, and
+                              # a product-less Debian row. Plain "debian"
+                              # would lead "Debian Games Task" and score a
+                              # games metapackage at 80.
+80   ubuntu linux, vendor:canonical   # a product-less Canonical row is
+                              # Ubuntu; "Ubuntu Advantage Tools" is not 80
+79   vendor:red hat           # every Red Hat product name begins "Red Hat", so
+                              # a plain token here would be a vendor wildcard:
+                              # it is what scored "Red Hat Build of Keycloak"
+                              # and "Exploit Intelligence" at 79
+79   rhel, enterprise linux   # "Red Hat Enterprise Linux", with the leading
+                              # repeat of the vendor dropped
 78   centos
 76   docker
 75   kubernetes
@@ -62,31 +157,41 @@
 70   dns
 
 # --- the enterprise middle: not everywhere, but everywhere that matters -- #
+#
+# Company names here are `vendor:` lines: they score a row that names no
+# product ("Cisco / Multiple Products"), never a specific one, because these
+# catalogues run from the core of the internet down to a single webcam. Each
+# vendor's flagship -- the product the weight was actually set for -- is
+# listed as a spelling on the same weight.
 68   microsoft office
 68   exchange
 66   sharepoint
 66   outlook
 65   active directory
-64   vmware
-64   esxi
-63   citrix
-62   fortinet
-62   fortios
-61   palo alto
+64   vendor:vmware
+64   esxi, vmware esxi        # Broadcom files it under its own vendor name now
+63   vendor:citrix, netscaler   # NetScaler ADC and Gateway: the product
+                              # Citrix's 63 was set for
+62   vendor:fortinet
+62   fortios, fortigate       # FortiGate is the appliance FortiOS runs on
+61   vendor:palo alto
 61   pan-os
-60   cisco
-60   ios xe
-58   ivanti
-58   pulse secure
-57   sonicwall
-56   f5
+60   vendor:cisco
+60   ios xe, cisco/ios xe, cisco/ios   # Cisco's router OS, scoped to Cisco so
+                              # Apple's iOS above is never scored at 60
+58   vendor:ivanti
+58   pulse secure, pulse, connect secure   # one VPN appliance under the three
+                              # names it has shipped under (Pulse Secure,
+                              # Pulse Connect Secure, Ivanti Connect Secure)
+57   vendor:sonicwall
+56   vendor:f5
 56   big-ip
-55   juniper
-54   sap
-53   oracle
+55   vendor:juniper, junos    # Junos is the router OS Juniper's 55 was set for
+54   vendor:sap, netweaver    # NetWeaver is SAP's application platform
+53   vendor:oracle, weblogic  # WebLogic is Oracle's enterprise app server
 52   jenkins
 52   gitlab
-51   atlassian
+51   vendor:atlassian
 51   confluence
 50   jira
 
@@ -97,11 +202,17 @@
 46   node.js
 46   nodejs
 45   npm
-44   .net
+44   .net                     # binds as one word, so "Net-IDN-Encode" (a Perl
+                              # module) is not it, and "Telerik UI for
+                              # ASP.NET" does not lead with it either
 44   dotnet
-43   log4j
+43   log4j, log4j2            # the CPE/CNA spelling of the same library
 42   spring framework
-41   wordpress
+41   wordpress                # WordPress core, and the plugins KEV files under
+                              # the WordPress vendor ("WordPress / File Manager
+                              # Plugin"): a plugin runs inside a core install,
+                              # so the reach question -- how many readers are
+                              # touched -- is answered by core either way.
 40   drupal
 39   joomla
 38   git
@@ -113,16 +224,20 @@
 32   winrar
 31   pdf reader
 31   acrobat
-
 # --- consumer edge kit: one household each, but a great many households --- #
-28   tp-link
-27   netgear
-26   d-link
-25   asus
-24   synology
-23   qnap
-22   ubiquiti
-20   android tv
+#
+# These are `brand:` lines: the weight is already the weight of the vendor's
+# weakest product, because everything these companies ship is one box in one
+# household. So it is honest for the whole catalogue, named product or not,
+# and a router model number this table has never heard of still scores.
+28   brand:tp-link
+27   brand:netgear
+26   brand:d-link
+25   brand:asus
+24   brand:synology
+23   brand:qnap
+22   brand:ubiquiti
+20   android tv               # Google's TV platform, not the phone OS
 18   chromecast
 
 # Anything absent scores 0. That is deliberate: a newsletter should not claim

@@ -25,6 +25,7 @@ from src.news_rank import (
     KEV_TIER,
     MAX_ITEMS,
     RankedItem,
+    ReachEntry,
     ReachTable,
     load_reach_table,
     rank_news,
@@ -1005,6 +1006,317 @@ class TestQuietKevDayEndToEnd(unittest.TestCase):
         item = self.parsed("CVE-2026-75682")
         self.assertEqual(item.affected_products, ("Adobe Adobe Connect",))
         self.assertEqual(rank_news([item], None)[0].reach_match, "")
+
+
+# --------------------------------------------------------------------------- #
+# reach is matched at the HEAD of a product name, per vendor
+# --------------------------------------------------------------------------- #
+
+RULE_REACH_TEXT = """
+# every mechanism of the reach file, one line each
+100  windows
+98   chrome, google chrome
+95   iphone os, apple/ios
+62   vendor:fortinet
+60   ios xe, cisco/ios xe, cisco/ios
+44   .net
+26   brand:d-link
+"""
+
+
+def rule_table() -> ReachTable:
+    with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
+        handle.write(RULE_REACH_TEXT)
+        path = handle.name
+    return load_reach_table(path)
+
+
+@dataclass(frozen=True)
+class NamedRow:
+    """The shape a KEV row reaches the ranker in: a vendor and a product."""
+
+    vendor: str = ""
+    product: str = ""
+
+
+class TestReachMatchesTheHeadOfAName(unittest.TestCase):
+    """A reach token names software, and software is named head-first.
+
+    The rule this replaces matched a token as a substring of one flat blob of
+    every label on an item. Two live defects came out of that and both are
+    asserted here, plus the four cases that must NOT regress while fixing them.
+    """
+
+    def setUp(self):
+        self.table = rule_table()
+
+    def score(self, vendor, product):
+        return self.table.score(NamedRow(vendor, product))
+
+    # --- the two defects ---------------------------------------------------- #
+
+    def test_a_word_in_the_middle_of_a_name_is_not_reach(self):
+        """CVE-2026-84388: "Fortinet FortiPAM Chrome Extension" scored 98."""
+        self.assertEqual(self.score("Fortinet", "FortiPAM Chrome Extension"), (0, ""))
+
+    def test_a_match_may_not_stop_inside_a_word(self):
+        """CVE-2016-15059: the Perl module Net-IDN-Encode scored 44 as .NET."""
+        self.assertEqual(self.score("", "Net-IDN-Encode"), (0, ""))
+
+    def test_a_hyphen_binds_but_a_space_separates(self):
+        """The one-character difference between the two: nginx-ignition."""
+        self.assertEqual(self.score("Google", "Chrome-Cast-Thing"), (0, ""))
+        self.assertEqual(self.score("Google", "Chrome for Android"), (98, "chrome"))
+
+    # --- what must survive the fix ------------------------------------------ #
+
+    def test_an_edition_after_the_head_still_scores(self):
+        """CVE-2020-1472 ships on Windows Server 2019 and is still 100."""
+        self.assertEqual(self.score("Microsoft", "Windows Server 2019"), (100, "windows"))
+
+    def test_a_vendor_qualified_spelling_still_scores(self):
+        self.assertEqual(self.score("Google", "Chrome"), (98, "chrome"))
+
+    def test_a_trailing_version_is_not_part_of_the_name(self):
+        self.assertEqual(self.score("Microsoft", "Windows 10"), (100, "windows"))
+
+    def test_a_vulnerable_cpe_is_still_a_surface(self):
+        item = FakeItem(
+            "CVE-2026-9901", "HIGH", 7.0,
+            vulnerable_cpes=("cpe:2.3:o:microsoft:windows:10:*:*:*:*:*:*:*",),
+        )
+        self.assertEqual(self.table.score(item), (100, "windows"))
+
+    def test_a_platform_cpe_is_still_not_a_surface(self):
+        item = FakeItem(
+            "CVE-2026-9902", "HIGH", 7.0,
+            platform_cpes=("cpe:2.3:o:microsoft:windows:10:*:*:*:*:*:*:*",),
+        )
+        self.assertEqual(self.table.score(item), (0, ""))
+
+
+class TestAVendorIsNotSoftware(unittest.TestCase):
+    """A company name may not lead a product name.
+
+    Letting it is the same over-reach one level up: every niche product a big
+    vendor ships would inherit the vendor's weight, so "Fortinet FortiPAM
+    Chrome Extension" would simply keep a figure after losing "chrome".
+    """
+
+    def setUp(self):
+        self.table = rule_table()
+
+    def score(self, vendor, product):
+        return self.table.score(NamedRow(vendor, product))
+
+    def test_a_vendor_line_scores_a_row_that_names_no_product(self):
+        self.assertEqual(self.score("Fortinet", "Multiple Products"), (62, "fortinet"))
+
+    def test_a_vendor_line_never_scores_a_named_product(self):
+        self.assertEqual(self.score("Fortinet", "FortiWeb Cloud Connector"), (0, ""))
+
+    def test_a_brand_line_scores_the_whole_catalogue(self):
+        """d-link is 26 because that is true of every D-Link box."""
+        self.assertEqual(self.score("D-Link", "DIR-859 Router"), (26, "d-link"))
+        self.assertEqual(self.score("D-Link", "Multiple Products"), (26, "d-link"))
+
+
+class TestATokenMayBeScopedToItsVendor(unittest.TestCase):
+    """Cisco IOS is a router OS and Apple iOS is a phone OS."""
+
+    def setUp(self):
+        self.table = rule_table()
+
+    def score(self, vendor, product):
+        return self.table.score(NamedRow(vendor, product))
+
+    def test_ciscos_ios_does_not_score_an_apple_row(self):
+        weight, token = self.score("Apple", "iOS and iPadOS")
+        self.assertEqual(weight, 95)
+        self.assertNotEqual(token, "ios xe")
+
+    def test_apples_ios_does_not_score_a_cisco_row(self):
+        weight, token = self.score("Cisco", "IOS XE Web UI")
+        self.assertEqual(weight, 60)
+        self.assertNotEqual(token, "iphone os")
+
+    def test_an_unscoped_ios_token_would_take_the_apple_row(self):
+        """Guard the premise: without the scope this is exactly the defect.
+
+        Strip only the Cisco scope and Cisco's router-OS line starts taking
+        rows it has no claim on -- an Apple phone row and a vendor the table
+        has never heard of both score 60 off it.
+        """
+        cisco_only = ReachTable(entries=tuple(
+            e for e in self.table.entries if e.scope == "cisco"))
+        self.assertEqual(cisco_only.score(NamedRow("Apple", "iOS 17")), (0, ""))
+
+        unscoped = ReachTable(entries=tuple(
+            ReachEntry(token=e.token, weight=e.weight, note=e.note, kind=e.kind)
+            for e in cisco_only.entries
+        ))
+        self.assertEqual(unscoped.score(NamedRow("Apple", "iOS 17"))[0], 60)
+        self.assertEqual(unscoped.score(NamedRow("Netgear", "ios thing"))[0], 60)
+
+
+class TestTheShippedReachFile(unittest.TestCase):
+    """The four named acceptance cases, against data/software_reach.txt.
+
+    Offline: the file is read from disk, the items are the shapes the live
+    feeds produce for those four CVEs.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = load_reach_table(DEFAULT_REACH_FILE)
+
+    def test_fortipam_chrome_extension_is_unrated(self):
+        self.assertEqual(
+            self.table.score(NamedRow("Fortinet", "FortiPAM Chrome Extension")), (0, ""))
+
+    def test_net_idn_encode_is_unrated(self):
+        self.assertEqual(self.table.score(NamedRow("", "Net-IDN-Encode")), (0, ""))
+
+    def test_windows_server_2019_keeps_its_full_weight(self):
+        self.assertEqual(
+            self.table.score(NamedRow("Microsoft", "Windows Server 2019")),
+            (100, "windows"))
+
+    def test_no_cisco_scoped_token_can_score_an_apple_row(self):
+        cisco_only = ReachTable(entries=tuple(
+            e for e in self.table.entries if e.scope == "cisco"))
+        self.assertTrue(cisco_only.entries, "the file no longer scopes anything to cisco")
+        for product in ("iOS", "iOS and iPadOS", "iOS, iPadOS, and macOS", "iPadOS"):
+            with self.subTest(product=product):
+                self.assertEqual(cisco_only.score(NamedRow("Apple", product)), (0, ""))
+
+    def test_every_token_in_the_file_is_reachable(self):
+        """A token nobody can match is a weight that silently does nothing.
+
+        The row is built the way a feed writes one -- the token in the PRODUCT
+        field, the vendor field carrying only a scope the file itself asked
+        for. Putting the token in both fields would let the vendor-word rule
+        satisfy this test for a token the product rule cannot reach, which is
+        how a `41 wordpress` that scored nothing live passed here before.
+        """
+        for entry in self.table.entries:
+            with self.subTest(token=entry.token, kind=entry.kind):
+                if entry.kind == "product":
+                    row = NamedRow(entry.scope, entry.token)
+                else:
+                    row = NamedRow(entry.token, "Multiple Products")
+                self.assertGreater(self.table.score(row)[0], 0)
+
+
+class TestSoftwareNamedInTheVendorField(unittest.TestCase):
+    """A feed chooses which half of a name goes in which field.
+
+    KEV files WordPress core as ("WordPress", "Core") and PHP's FPM as
+    ("PHP", "FastCGI Process Manager (FPM)") -- the software this table prices
+    by name is in the VENDOR field and the product field holds a component.
+    Refusing the vendor word outright made `41 wordpress`, `84 php`,
+    `52 gitlab`, `40 drupal`, `52 jenkins`, `80 openbsd` and `76 docker`
+    unmatchable against the live catalogue while the file still priced them.
+
+    Every row below is a real live CISA KEV row shape, quoted in the card.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = load_reach_table(DEFAULT_REACH_FILE)
+
+    def score(self, vendor, product):
+        return self.table.score(NamedRow(vendor, product))
+
+    # --- software the file names, filed under its own name ------------------ #
+
+    def test_wordpress_core_scores_wordpress(self):
+        """CVE-2026-60137, CVE-2026-63030, CVE-2018-7602-era rows."""
+        self.assertEqual(self.score("WordPress", "Core"), (41, "wordpress"))
+
+    def test_drupal_core_scores_drupal(self):
+        """CVE-2019-6340."""
+        self.assertEqual(self.score("Drupal", "Core"), (40, "drupal"))
+
+    def test_gitlab_ce_and_ee_scores_gitlab(self):
+        """CVE-2021-22205."""
+        self.assertEqual(
+            self.score("GitLab", "Community and Enterprise Editions"), (52, "gitlab"))
+
+    def test_php_fpm_scores_php(self):
+        """CVE-2019-11043."""
+        self.assertEqual(
+            self.score("PHP", "FastCGI Process Manager (FPM)"), (84, "php"))
+
+    def test_openbsd_opensmtpd_scores_openbsd(self):
+        """CVE-2020-7247."""
+        self.assertEqual(self.score("OpenBSD", "OpenSMTPD"), (80, "openbsd"))
+
+    def test_docker_desktop_scores_docker(self):
+        """CVE-2019-15752."""
+        self.assertEqual(
+            self.score("Docker", "Desktop Community Edition"), (76, "docker"))
+
+    def test_jenkins_plugin_scores_jenkins(self):
+        """CVE-2019-1003029: a plugin runs inside the server it plugs into."""
+        self.assertEqual(
+            self.score("Jenkins", "Script Security Plugin"), (52, "jenkins"))
+
+    # --- and the company names that must still NOT lead a product ----------- #
+
+    def test_a_vendor_line_still_never_leads_a_named_product(self):
+        for vendor, product in (
+            ("Fortinet", "FortiWeb Cloud Connector"),
+            ("Fortinet", "FortiPAM Chrome Extension"),
+            ("Red Hat", "Build of Keycloak"),
+            ("Apple", "Xcode Server"),
+            ("Cisco", "Small Business RV Series Routers"),
+            ("Apache", "MINA"),
+            ("Oracle", "Agile PLM"),
+        ):
+            with self.subTest(vendor=vendor, product=product):
+                self.assertEqual(self.score(vendor, product), (0, ""))
+
+    def test_the_file_decides_which_names_are_companies(self):
+        """The rule reads the file, it does not carry its own list."""
+        self.assertIn("fortinet", self.table.company_names)
+        self.assertIn("red hat", self.table.company_names)
+        self.assertNotIn("wordpress", self.table.company_names)
+        self.assertNotIn("php", self.table.company_names)
+
+    def test_a_name_written_both_ways_is_still_a_company(self):
+        """The guard, on a file that spells one name as product AND vendor.
+
+        In the shipped file no name is written both ways except `android`,
+        where both lines are 97 and the ambiguity costs nothing. This builds
+        the case anyway, because the rule must be the file's to decide: a
+        `vendor:` line on a name disqualifies that name from leading a product,
+        even when the same name also appears as a plain product token.
+        """
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
+            handle.write("62   fortinet, vendor:fortinet\n41   wordpress\n")
+            path = handle.name
+        table = load_reach_table(path)
+        self.assertEqual(table.score(NamedRow("Fortinet", "FortiWeb Cloud Connector")),
+                         (0, ""))
+        self.assertEqual(table.score(NamedRow("Fortinet", "Multiple Products")),
+                         (62, "fortinet"))
+        self.assertEqual(table.score(NamedRow("WordPress", "Core")), (41, "wordpress"))
+
+    def test_making_a_named_product_a_vendor_line_would_stop_it(self):
+        """Guard the premise: the vendor: line is what refuses the name.
+
+        Rewrite `41 wordpress` as a vendor line and the WordPress core row
+        loses it again -- so the rule is obeying the file, not a hard-coded
+        allowance for these seven names.
+        """
+        rewritten = ReachTable(entries=tuple(
+            ReachEntry(token=e.token, weight=e.weight, note=e.note,
+                       kind="vendor" if e.token == "wordpress" else e.kind,
+                       scope=e.scope)
+            for e in self.table.entries
+        ))
+        self.assertEqual(rewritten.score(NamedRow("WordPress", "Core")), (0, ""))
 
 
 if __name__ == "__main__":
