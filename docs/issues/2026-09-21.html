@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-09-21</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-09-21">CyberWatch Newsletter -- 2026-09-21</h2>
+<p>5 items out of 248 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2025-39682">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-39682">CVE-2025-39682</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2025-09-05</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical flaw in the Linux kernel TLS implementation mishandled zero-length records on the receive list, potentially allowing attackers to exploit the vulnerability remotely. The issue arises when an initial record from the receive list is zero length, bypassing expected processing logic.</p>
+<p><strong>Who is affected:</strong> Users running the Linux kernel, including those managing Debian Linux systems or Siemens SIMATIC CN 4100 devices, are affected by this vulnerability. Any environment utilizing TLS over Linux kernel networking stacks may be at risk.</p>
+<p><strong>How serious:</strong> This vulnerability is rated Critical with a CVSS score of 9.8, indicating severe impact on confidentiality, integrity, and availability. Remote attackers can exploit it without authentication or user interaction.</p>
+<p><strong>What to do:</strong> Apply the available kernel patches referenced in the stable git commits to resolve the TLS record handling issue. Ensure all systems are updated to a version containing the fix for CVE-2025-39682.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach 100/100 via &quot;linux kernel&quot;.</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-76460">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76460">CVE-2026-76460</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2026-09-16</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Cisco Identity Services Engine on 2026-09-16, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in the Cisco Identity Services Engine API allows unauthenticated remote attackers to bypass authentication controls. This flaw enables unauthorized access to the device by circumventing the web-based management interface through crafted requests.</p>
+<p><strong>Who is affected:</strong> Organizations running Cisco Identity Services Engine Software or the Cisco ISE Passive Identity Connector are at risk.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a perfect CVSS score of 10.0, indicating full compromise of confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Review the official Cisco Security Advisory for mitigation steps and apply the necessary patches to affected systems immediately.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Cisco Identity Services Engine on 2026-09-16, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach 60/100 via &quot;cisco&quot;.</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-76461">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76461">CVE-2026-76461</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-14</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Cisco Secure Email Gateway on 2026-09-14, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in Cisco AsyncOS Software for Cisco Secure Email Gateway allows unauthenticated remote attackers to execute arbitrary commands with root privileges. The flaw stems from insufficient validation in the email parsing logic, enabling attackers to inject malicious SQL statements via crafted emails.</p>
+<p><strong>Who is affected:</strong> Organizations using Cisco Secure Email Gateway hardware appliances (models C195, C395, C695) or virtual appliances (C100v, C300v, C600v) running affected versions of AsyncOS Software.</p>
+<p><strong>How serious:</strong> This is a critical severity issue with a CVSS score of 9.8, allowing full system compromise including root access and arbitrary command execution on the underlying operating system.</p>
+<p><strong>What to do:</strong> Apply the vendor-provided patches or updates to the Cisco Secure Email Gateway devices as soon as possible. Monitor the Cisco Security Advisory and CISA Known Exploited Vulnerabilities catalog for specific version details and mitigation steps.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Cisco Secure Email Gateway on 2026-09-14, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach 60/100 via &quot;cisco&quot;.</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2026-53266">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-53266">CVE-2026-53266</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.8</code> <code>published 2026-06-25</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in the Linux kernel&#x27;s netfilter bridge component allows an attacker with local privileges to write to non-writable memory fragments during ARP source hardware address rewriting. This flaw occurs because the code fails to ensure the ARP header range is writable before accessing or modifying it, potentially leading to memory corruption.</p>
+<p><strong>Who is affected:</strong> Administrators and developers running Linux systems that utilize the netfilter bridge ebtables SNAT target with ARP rewrite capabilities are affected.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 8.8, indicating significant potential for impact on confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Apply the kernel updates referenced in the stable git commits provided in the vulnerability record to resolve the memory handling error.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.8); reach 100/100 via &quot;linux kernel&quot;.</p>
+</article>
+<article>
+<h3 id="5-known-exploited-cve-2026-87886">5. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-87886">CVE-2026-87886</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 7.8</code> <code>published 2026-09-17</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Acronis Backup on 2026-09-16, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> Acronis Backup plugins for cPanel, Plesk, and DirectAdmin contain insecure file permissions that allow local privilege escalation. This vulnerability affects versions before specific build numbers for each respective hosting control panel integration.</p>
+<p><strong>Who is affected:</strong> Administrators running Acronis Backup on Linux systems with cPanel &amp; WHM, Plesk, or DirectAdmin are at risk. Any user with local access to these affected installations can potentially escalate privileges.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 7.8, indicating significant impact on confidentiality, integrity, and availability. Attackers can gain full control of the system by exploiting the permission flaws.</p>
+<p><strong>What to do:</strong> Update the Acronis Backup plugin for cPanel to build 1.9.3.1021 or later. Upgrade the Acronis Backup extension for Plesk to build 1.8.11.638 or later, and the DirectAdmin plugin to build 1.2.3.238 or later.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Acronis Backup on 2026-09-16, so it is being used against people now -- that outranks severity. HIGH (CVSS 7.8); reach 100/100 via &quot;linux kernel&quot;.</p>
+</article>
+<p><em>Summaries: 5/5 written by local LLM at [internal endpoint redacted] (model: a local model).</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>

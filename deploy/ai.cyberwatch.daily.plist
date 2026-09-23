@@ -1,0 +1,46 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<!--
+  The daily CyberWatch run. Same shape as ai.hermes.update-sweep: a user
+  LaunchAgent, one StartCalendarInterval, logs under ~/.hermes/logs.
+
+    cp deploy/ai.cyberwatch.daily.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.cyberwatch.daily.plist
+    launchctl kickstart -p gui/$(id -u)/ai.cyberwatch.daily
+
+  07:10 local, not 08:00: the update sweep already runs at 08:00, and CISA
+  publishes KEV additions during US business hours, so the previous day's
+  listings are in the catalogue by any morning hour. RunAtLoad is off on
+  purpose: loading the agent should not publish an issue.
+
+  The plist is a template with one substitution: replace /Users/YOURNAME with
+  the checkout's home if this is installed anywhere else. The audit flags
+  absolute home paths, so this file is listed in deploy/audit-allowlist.txt
+  under that label.
+-->
+<plist version="1.0">
+<dict>
+  <key>Label</key><string>ai.cyberwatch.daily</string>
+  <key>ProgramArguments</key>
+  <array>
+    <string>/bin/bash</string>
+    <string>/Users/YOURNAME/Projects/cyberwatch-news/deploy/cyberwatch-daily.sh</string>
+  </array>
+  <key>EnvironmentVariables</key>
+  <dict>
+    <key>PATH</key>
+    <string>/Users/YOURNAME/.local/bin:/opt/homebrew/bin:/usr/bin:/bin:/usr/sbin:/sbin</string>
+    <!-- The renderer falls back to raw NVD text when this is unreachable, and
+         says so on the page. Set here rather than hardcoded so the endpoint can
+         move without a commit. -->
+    <key>CYBERWATCH_LLM_BASE_URL</key>
+    <string>http://localhost:8001/v1</string>
+  </dict>
+  <key>StartCalendarInterval</key>
+  <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
+  <key>RunAtLoad</key><false/>
+  <key>StandardOutPath</key><string>/Users/YOURNAME/.hermes/logs/cyberwatch-daily.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOURNAME/.hermes/logs/cyberwatch-daily.err.log</string>
+  <key>WorkingDirectory</key><string>/Users/YOURNAME/Projects/cyberwatch-news</string>
+</dict>
+</plist>

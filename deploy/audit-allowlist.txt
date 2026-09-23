@@ -1,0 +1,66 @@
+# What this repository is allowed to publish.
+#
+# Format:  <label>|<path>   # why it is safe
+# One line per accepted finding of tools/public_repo_audit.py. A finding that is
+# not listed here fails the audit, including a new one of a kind already
+# accepted in another file -- that is the point of the file.
+#
+# Credential findings ("secret" severity) can NOT be listed here. Those get
+# removed and the credential rotated.
+#
+# ---------------------------------------------------------------------------
+# JUDGEMENT CALL ON RECORD: `localhost:8001`
+#
+# The newsletter's summaries are written by a model on the author's home
+# network, and the issue footer names the endpoint so a reader can tell whether
+# a summary was written or fell back to raw NVD text. `localhost` is an mDNS
+# name: it resolves on that LAN and nowhere else, and it is not a credential.
+# Accepted in the repository for that reason.
+#
+# It is NOT accepted on the published site. src/site.py redacts every URL
+# pointing at a non-public host before it reaches docs/, and
+# tests/test_site.py:TestPublicRepoHygiene proves it for the page and the feed.
+# So the code is readable by anyone cloning the repo, and a visitor to
+# cyberwatch.asutera.dev sees "[internal endpoint redacted]".
+#
+# If that trade is not wanted, the fix is to set CYBERWATCH_LLM_BASE_URL in the
+# launchd plist and drop the literal from run.py and README.md -- not to widen
+# this file.
+# ---------------------------------------------------------------------------
+
+internal host|README.md            # documents the default LLM endpoint; mDNS-only name
+internal host|run.py               # the default for CYBERWATCH_LLM_BASE_URL
+internal host|issues/2026-09-21.md # shipped issue footer; redacted in the published HTML
+internal host|issues/2026-09-22.md # shipped issue footer; redacted in the published HTML
+internal host|tools/probe_llm.py   # a probe for that same endpoint
+
+# Loopback and documentation addresses. Not disclosures at all: 127.0.0.1 and
+# the RFC 1918 ranges mean the same thing on every machine.
+internal host|src/render.py            # 127.0.0.1 default for the LLM client
+internal host|src/site.py              # the redaction pattern itself
+internal host|tests/test_kev_source.py # 127.0.0.1:9 (discard port) as an unreachable feed
+internal host|tests/test_site.py       # the hosts the redaction test asserts on
+internal host|tools/public_repo_audit.py  # this audit's own pattern
+internal host|deploy/cyberwatch-daily.sh  # git commit identity, cyberwatch-daily@localhost
+
+# Vendor PSIRT address copied from a real NVD record in a test fixture. Public
+# by definition -- it is how Adobe asks to be contacted about CVEs.
+email address|tests/test_news_rank.py  # psirt@adobe.com, from an NVD fixture
+
+# The delivery artifacts themselves.
+#
+# The plist is a launchd template and launchd has no variable expansion: an
+# agent's paths must be absolute, so the installing account's home is in the
+# file by necessity. It is one name, already visible in the GitHub account that
+# publishes the repo, and the README says to substitute it.
+absolute home path|deploy/ai.cyberwatch.daily.plist  # launchd needs absolute paths
+internal host|deploy/ai.cyberwatch.daily.plist       # the LLM endpoint, as an env var
+
+# This file, and the test that proves the audit can fail, quote the very strings
+# the audit looks for. They have to.
+internal host|deploy/audit-allowlist.txt   # quotes the accepted hosts
+email address|deploy/audit-allowlist.txt   # quotes the accepted address
+internal host|tests/test_publish.py        # hosts planted to make the audit fail
+email address|tests/test_publish.py        # an address planted for the same reason
+absolute home path|tests/test_publish.py   # a path planted for the same reason
+absolute home path|README.md               # the install command's plist path
