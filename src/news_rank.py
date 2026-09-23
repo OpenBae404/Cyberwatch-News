@@ -73,6 +73,10 @@ _SCORE_BANDS = ((9.0, "CRITICAL"), (7.0, "HIGH"), (4.0, "MEDIUM"), (0.1, "LOW"))
 _EPOCH = datetime(1, 1, 1, tzinfo=timezone.utc)
 
 _NON_ALNUM = re.compile(r"[^a-z0-9]+")
+# See `_normalise_name`: separators end a word, everything else binds one.
+_NAME_SEPARATORS = frozenset(" \t\r\n_,;/|")
+_RUN_OF_JOINERS = re.compile(r"-+")
+_JOINER_AT_A_BOUNDARY = re.compile(r"(?:-+ +-*)|(?:-* +-+)")
 
 
 # --------------------------------------------------------------------------- #
@@ -81,11 +85,40 @@ _NON_ALNUM = re.compile(r"[^a-z0-9]+")
 
 @dataclass(frozen=True)
 class ReachEntry:
-    """One line of the reach file: how many readers run this software."""
+    """One token of the reach file: how many readers run this software.
+
+    `kind` is what the token names, and it decides what the token may match:
+
+      * ``"product"`` -- a piece of software. It matches a product name from
+        the START, at a word boundary: "windows" matches "Windows Server
+        2019", "exchange" matches "Exchange Server". It never matches from the
+        middle, so "chrome" does not match "FortiPAM Chrome Extension", and
+        the head has to be the whole first WORD, so ".net" does not match
+        "Net-IDN-Encode" and "nginx" does not match "nginx-ignition".
+      * ``"vendor"``  -- a company, written ``vendor:apple`` in the file. A
+        vendor is not software: it only scores when the feed names no specific
+        product ("Apple / Multiple Products"), because otherwise every one of
+        that vendor's products, however niche, would inherit the vendor's
+        reach.
+      * ``"brand"``   -- a company whose whole catalogue carries the weight,
+        written ``brand:d-link``. It matches any item of that vendor, named
+        product or not. Only defensible when the weight is already set at the
+        level of the vendor's WEAKEST product: "d-link" is 26 because one
+        household runs each piece of D-Link kit, and that is true of every
+        D-Link box. "cisco" can never be a brand, because Cisco's 60 is
+        IOS-scale and a Cisco webcam is not.
+
+    `scope` qualifies a product token with the vendor it belongs to, written
+    ``cisco/ios`` in the file. Two vendors genuinely ship different software
+    under one name -- Cisco IOS is a router OS, Apple iOS is a phone OS -- and
+    an unqualified token hands every row of one to the other's weight.
+    """
 
     token: str
     weight: int
     note: str = ""
+    kind: str = "product"
+    scope: str = ""
 
 
 @dataclass(frozen=True)
@@ -98,11 +131,27 @@ class ReachTable:
     def score(self, item: Any) -> tuple[int, str]:
         """Highest reach weight this item matches, and the token that matched.
 
+        A product token matches a product name from its START, at a word
+        boundary -- never from the middle, and never as part of a word.
+        "Windows Server 2019" is Windows and "Exchange Server" is Exchange,
+        because a product name is written head-first: the software comes
+        first and the edition, platform or wrapper follows. The reverse is not
+        true, which is the defect this rule replaces: "Fortinet FortiPAM
+        Chrome Extension" is a FortiPAM thing, not Chrome. And the head has to
+        be the whole first word: "Net-IDN-Encode" is a Perl module, not
+        Microsoft .NET, and "nginx-ignition" is not nginx.
+
+        A vendor name is only a name when the feed gives no product (a KEV row
+        reading "Apple / Multiple Products"). A brand (`brand:d-link`) matches
+        any item of that vendor, because its weight is the weight of its
+        weakest product. A scoped token (`cisco/ios`) matches only under the
+        vendor that ships it, so Apple's iOS is never scored as Cisco's.
+
         No match is ``(0, "")`` -- unknown reach, not zero reach. It only ever
         costs an item a tie-break, never a tier.
         """
-        haystack = _reach_haystack(item)
-        if not haystack:
+        surface = _reach_surfaces(item)
+        if not (surface.candidates or surface.bare_vendors):
             return 0, ""
         best_weight = 0
         best_token = ""
@@ -110,7 +159,31 @@ class ReachTable:
             if entry.weight <= best_weight:
                 # entries are sorted heaviest first, so nothing left can win
                 break
-            if f" {entry.token} " in haystack:
+            if entry.kind == "vendor":
+                matched = entry.token in surface.bare_vendors
+            elif entry.kind == "brand":
+                # A brand is a company whose whole catalogue carries this
+                # weight, so it scores that vendor's items whether or not they
+                # name a product. It never matches a NAME: "Android TV" is a
+                # Google product, and it is 97 only when the feed files it
+                # under the Android vendor itself.
+                matched = entry.token in surface.bare_vendors or any(
+                    candidate.vendor == entry.token for candidate in surface.candidates
+                )
+            else:
+                # A product token matches the product name, or the name with
+                # its vendor in front ("google chrome"), and in both cases
+                # only from the start. Whether a company word may lead such a
+                # match is decided in the FILE, not here: a company whose
+                # catalogue runs from the core of the internet down to a
+                # webcam is written `vendor:cisco` and never reaches this
+                # branch.
+                matched = any(
+                    (not entry.scope or candidate.vendor == entry.scope)
+                    and candidate.leads_with(entry.token)
+                    for candidate in surface.candidates
+                )
+            if matched:
                 best_weight = entry.weight
                 best_token = entry.token
         return best_weight, best_token
@@ -136,6 +209,20 @@ def load_reach_table(path: str | Path = DEFAULT_REACH_FILE) -> ReachTable:
     A ranker that quietly ran with an empty table would still produce five
     items every day, all of them ordered by nothing, and no reader would ever
     see the difference. So a missing or empty file is an error.
+
+    One line is ``<weight> <token>[, <token>...]``. Several tokens on a line
+    are spellings of ONE reach claim at ONE weight -- "edge, microsoft edge",
+    "apple/ios, apple/ipados, iphone os". They share the line on purpose: the
+    weights in this file are the ranker's tie-break scale and are not this
+    module's to re-tune, so a matching change adds spellings to existing
+    weights rather than inventing new ones.
+
+    A token may be written:
+
+      ``windows``        a product (see `ReachEntry`)
+      ``cisco/ios``      a product, only under that vendor
+      ``vendor:apple``   a company; only a row that names no product
+      ``brand:d-link``   a company; every row it files
     """
     path = Path(path)
     try:
@@ -144,7 +231,7 @@ def load_reach_table(path: str | Path = DEFAULT_REACH_FILE) -> ReachTable:
         raise FileNotFoundError(f"reach table not readable at {path}: {exc}") from exc
 
     entries: list[ReachEntry] = []
-    seen: set[str] = set()
+    seen: set[tuple[str, str, str]] = set()
     for lineno, raw_line in enumerate(text.splitlines(), start=1):
         line = raw_line.strip()
         if not line or line.startswith("#"):
@@ -159,19 +246,57 @@ def load_reach_table(path: str | Path = DEFAULT_REACH_FILE) -> ReachTable:
             raise ValueError(f"{path}:{lineno}: weight {parts[0]!r} is not an integer") from exc
         if not 0 <= weight <= 100:
             raise ValueError(f"{path}:{lineno}: weight {weight} is outside 0-100")
-        token = _normalise(parts[1])
-        if not token:
+
+        spellings = [chunk.strip() for chunk in parts[1].split(",")]
+        if not any(spellings):
             raise ValueError(f"{path}:{lineno}: token is empty after normalisation")
-        if token in seen:
-            raise ValueError(f"{path}:{lineno}: duplicate token {token!r}")
-        seen.add(token)
-        entries.append(ReachEntry(token=token, weight=weight, note=note.strip()))
+        for raw_token in spellings:
+            if not raw_token:
+                raise ValueError(f"{path}:{lineno}: empty token in {raw_line!r}")
+            entry = _parse_reach_token(raw_token, weight, note.strip(), path, lineno, raw_line)
+            key = (entry.kind, entry.scope, entry.token)
+            if key in seen:
+                raise ValueError(f"{path}:{lineno}: duplicate token {entry.token!r}")
+            seen.add(key)
+            entries.append(entry)
 
     if not entries:
         raise ValueError(f"{path}: reach table has no entries")
 
     entries.sort(key=lambda e: (-e.weight, e.token))
     return ReachTable(entries=tuple(entries), source=str(path))
+
+
+def _parse_reach_token(
+    raw_token: str, weight: int, note: str, path: Path, lineno: int, raw_line: str
+) -> ReachEntry:
+    """One written token -> one `ReachEntry`, kind and scope decoded."""
+    kind = "product"
+    lowered = raw_token.lower()
+    if lowered.startswith("vendor:"):
+        # "vendor:apple" -- a company, not software. It scores only for an item
+        # that names no product at all; see ReachEntry.
+        kind = "vendor"
+        raw_token = raw_token.split(":", 1)[1]
+    elif lowered.startswith("brand:"):
+        # "brand:d-link" -- a company whose whole catalogue is worth the same,
+        # so the weight is honest for any product of it.
+        kind = "brand"
+        raw_token = raw_token.split(":", 1)[1]
+
+    scope = ""
+    if kind == "product" and "/" in raw_token:
+        # "cisco/ios" -- this token means this software under this vendor only.
+        # Apple's iOS is a different operating system.
+        scope_text, _, raw_token = raw_token.partition("/")
+        scope = _normalise_name(scope_text)
+        if not scope:
+            raise ValueError(f"{path}:{lineno}: scope is empty in {raw_line!r}")
+
+    token = _normalise_name(raw_token)
+    if not token:
+        raise ValueError(f"{path}:{lineno}: token is empty after normalisation")
+    return ReachEntry(token=token, weight=weight, note=note, kind=kind, scope=scope)
 
 
 # --------------------------------------------------------------------------- #
@@ -464,32 +589,306 @@ def _normalise(text: Any) -> str:
     return _NON_ALNUM.sub(" ", str(text).lower()).strip()
 
 
-def _reach_haystack(item: Any) -> str:
-    """The text the reach tokens are matched against, space-padded for whole-word hits.
+def _normalise_name(text: Any) -> str:
+    """Like `_normalise`, but it keeps the difference between two punctuations.
 
-    Product labels and the vendor/product fields of the item's VULNERABLE CPEs
-    -- never the description, and never a platform CPE. `src/sources/nvd.py`
-    splits the two: platform CPEs are "context, never a match surface". Scoring
-    reach against the union is how CVE-2026-87886 (Acronis Backup) scored reach
-    100 through a `vulnerable: false` linux:linux_kernel entry -- the Linux
-    kernel is what the agent runs on, not what the bug is in.
+    Reach is anchored to the HEAD of a product name, so the matcher has to know
+    where one word ends. Flattening every punctuation mark to a space loses
+    exactly that: ".NET Framework" and "Net-IDN-Encode" both become "net ...",
+    and a Perl module gets scored as Microsoft's runtime -- one of the two
+    defects this card exists to kill, one character wide.
+
+    So the two kinds of punctuation are kept apart:
+
+      * SEPARATORS -- whitespace, `_`, `,`, `;`, `/`, `|`. A CPE writes
+        "internet_explorer" and KEV writes "iOS, iPadOS, and macOS"; both are
+        lists of words, so these become spaces.
+      * JOINERS -- everything else (`-`, `.`, `'`, `&`, brackets). These bind
+        the characters on either side into ONE word: "net-idn-encode" and
+        "nginx-ignition" are single names, not a name plus a qualifier, and a
+        table token may not stop in the middle of one. They become "-".
+
+    A joiner next to a separator is dropped, so "Acrobat (Classic)" is
+    "acrobat classic" rather than "acrobat -classic-".
     """
-    parts: list[str] = []
-    parts.extend(_as_strings(_get(item, "affected_products", ())))
-    for vendor, product in _vulnerable_vendor_products(item):
-        if vendor:
-            parts.append(vendor)
-        if product:
-            parts.append(product)
-    # KEV rows name the software directly; they are the most reliable label we get.
-    for name in ("vendor", "product"):
-        value = _get(item, name, "")
-        if isinstance(value, str) and value.strip():
-            parts.append(value)
+    out = []
+    for char in str(text).lower():
+        if char.isalnum():
+            out.append(char)
+        elif char in _NAME_SEPARATORS:
+            out.append(" ")
+        else:
+            out.append("-")
+    joined = "".join(out)
+    joined = _RUN_OF_JOINERS.sub("-", joined)
+    joined = _JOINER_AT_A_BOUNDARY.sub(" ", joined)
+    return joined.strip(" -")
 
-    normalised = [_normalise(p) for p in parts]
-    joined = " ".join(p for p in normalised if p)
-    return f" {joined} " if joined else ""
+
+# Product fields that name no product: a feed row saying "everything this
+# vendor ships". CISA KEV writes 53 Apple rows this way. An item like this is
+# the one case where a vendor line in the reach table is the only thing that
+# can describe it.
+_UNSPECIFIC_PRODUCTS = frozenset({
+    "multiple products",
+    "multiple product",
+    "multiple",
+    "various products",
+    "various",
+    "all products",
+    "several products",
+})
+
+
+def _name_leads_with(name: str, token: str) -> bool:
+    """Does this product name START with `token`, at a word boundary?
+
+    "windows server 2019" leads with "windows"; "fortipam chrome extension"
+    does not lead with "chrome". Product names are written head-first -- the
+    software, then the edition, platform or wrapper -- so the head is the
+    identity and everything after it narrows. Matching anywhere else is the
+    defect this replaces: a word in the middle usually says what the product
+    plugs INTO, not what it is.
+    """
+    if not name or not token:
+        return False
+    return name == token or name.startswith(f"{token} ")
+
+
+@dataclass(frozen=True)
+class _ReachCandidate:
+    """One named product of one vendor, as the several names it goes by.
+
+    vendor     the normalised vendor word ("cisco", "apple"), or "" when the
+               feed gives none. A scoped table token (`cisco/ios`) matches only
+               when this is its vendor, which is how Apple's iOS stays off
+               Cisco's line.
+    names      the product as the feed writes it, plus narrow rewrites (version
+               tail dropped, leading vendor repeat dropped). A product token
+               matches any of them from the START.
+    qualified  the same names with the vendor in front, so a table entry
+               spelled "google chrome" or "linux kernel" matches. A token that
+               is only the vendor word never matches here: "Red Hat Build of
+               Keycloak" must not score as "red hat", or the vendor over-reach
+               the `vendor:` mechanism exists to forbid simply comes back in
+               through the front of the name.
+    """
+
+    vendor: str
+    names: frozenset[str]
+    qualified: frozenset[str] = frozenset()
+
+    def leads_with(self, token: str) -> bool:
+        if any(_name_leads_with(name, token) for name in self.names):
+            return True
+        if not self.vendor or not token.startswith(f"{self.vendor} "):
+            # only a token that reaches PAST the vendor word may use the
+            # vendor-qualified spelling
+            return False
+        return any(_name_leads_with(name, token) for name in self.qualified)
+
+
+@dataclass(frozen=True)
+class _ReachSurface:
+    """What a reach token is allowed to be matched against, for one item.
+
+    candidates    one `_ReachCandidate` per named product the feed states. A
+                  product token matches a candidate's names from the start; a
+                  scoped token also has to match the candidate's vendor.
+    bare_vendors  vendors of rows that name NO product ("Apple / Multiple
+                  Products"). A `vendor:` table line matches only these, and a
+                  `brand:` line matches these and named rows alike.
+    """
+
+    candidates: tuple[_ReachCandidate, ...]
+    bare_vendors: set[str]
+
+
+def _reach_surfaces(item: Any) -> _ReachSurface:
+    """The names a reach token may match for this item, normalised.
+
+    Reach answers "how many readers run this software", so it is matched
+    against the item's PRODUCT identity:
+
+      * the product field of every (vendor, product) pair the feed vouches for
+        -- from a CPE NVD marks VULNERABLE, and from a KEV row's own
+        vendor/product fields, which name the software directly;
+      * the vendor+product of such a pair as one name, so a table entry spelled
+        "google chrome", "microsoft edge" or "linux kernel" still matches;
+      * for an item that carries no such pair (a mapping fixture, an
+        unanalysed CVE), the display labels in `affected_products`, taken whole
+        and with a leading vendor word optionally stripped -- the old "vendor
+        product" convention those labels are written in.
+
+    A product token matches any of those names from the START only (see
+    `_name_leads_with`), never from the middle and never mid-word.
+
+    A bare vendor is a separate, much narrower surface: it exists only when the
+    row names no specific product ("Apple / Multiple Products"), and only a
+    `vendor:` or `brand:` line in the reach table can match it. Letting a
+    company name lead a named product is the substring bug one level up --
+    every Fortinet product would inherit 62, which is how "Fortinet FortiPAM
+    Chrome Extension" would keep a reach figure after losing "chrome".
+
+    Each named product is kept as its own candidate, with its vendor attached,
+    because a token can be scoped to a vendor (`cisco/ios`). Pooling the names
+    of every pair into one bag would let a Cisco row satisfy an Apple-scoped
+    token whenever one item names both.
+
+    `cna_products` is deliberately NOT read here. It is a structured field the
+    one-per-product CAP keys on (see `product_keys`), added because a freshly
+    published CVE has no CPE at all; it is not evidence NVD has vouched for,
+    and putting it on this surface is a separate decision from this card's.
+
+    Platform CPEs are never a surface either: `src/sources/nvd.py` splits them
+    off, and scoring reach against the union is how CVE-2026-87886 (Acronis
+    Backup) scored reach 100 through a `vulnerable: false` linux:linux_kernel
+    entry -- the kernel is what the agent runs on, not what the bug is in.
+    """
+    candidates: list[_ReachCandidate] = []
+    bare_vendors: set[str] = set()
+
+    def add_candidate(vendor: str, names: set[str], qualified: set[str]) -> None:
+        names = {n for n in names if n}
+        qualified = {n for n in qualified if n}
+        if names or qualified:
+            candidates.append(
+                _ReachCandidate(
+                    vendor=vendor,
+                    names=frozenset(names),
+                    qualified=frozenset(qualified),
+                )
+            )
+
+    pairs = _raw_reach_pairs(item)
+    for raw_vendor, raw_product in pairs:
+        vendor = _normalise_name(raw_vendor)
+        product = _normalise_name(raw_product)
+        if product and _normalise(product) not in _UNSPECIFIC_PRODUCTS:
+            add_candidate(vendor, *_name_variants(vendor, product))
+        elif vendor:
+            bare_vendors.add(vendor)
+
+    if not pairs:
+        # Compatibility surface: items that never went through the NVD parser,
+        # and CVEs NVD has not analysed, carry only a joined "vendor product"
+        # display label. Take the label whole, and take it again with a leading
+        # vendor word removed -- the convention these labels are written in.
+        for label in _as_strings(_get(item, "affected_products", ())):
+            name = _normalise_name(label)
+            if not name:
+                continue
+            head, _, tail = name.partition(" ")
+            if tail and _normalise(tail) in _UNSPECIFIC_PRODUCTS:
+                bare_vendors.add(head)
+                continue
+            names = {tail, _drop_version_tail(tail)} if tail else {name}
+            add_candidate(head, names, {name, _drop_version_tail(name)})
+
+    bare_vendors.discard("")
+    return _ReachSurface(tuple(candidates), bare_vendors)
+
+
+def _name_variants(vendor: str, product: str) -> tuple[set[str], set[str]]:
+    """(plain names, vendor-qualified names) one (vendor, product) goes by.
+
+    The plain set is the product as the feed writes it, plus two narrow
+    rewrites that exist because feeds do not write product names the way a
+    reach table does:
+
+      * a trailing version is dropped, so "Windows 10" is Windows;
+      * a leading repeat of the vendor is dropped, so Google's "Google Chrome"
+        is also "chrome".
+
+    The qualified set is the same names with the vendor in front, so a table
+    entry spelled "google chrome" or "linux kernel" matches. It is kept apart
+    because a token that is only the vendor word must not match it -- see
+    `_ReachCandidate.leads_with`.
+
+    Both rewrites remove text from an END of the name. Nothing is ever taken
+    from the middle -- "FortiPAM Chrome Extension" has no variant that starts
+    with "chrome", and that is the whole point.
+    """
+    plain: set[str] = set()
+    qualified: set[str] = set()
+    if not product:
+        return plain, qualified
+
+    def add(bucket: set[str], name: str) -> None:
+        bucket.add(name)
+        bucket.add(_drop_version_tail(name))
+
+    add(plain, product)
+    if vendor:
+        add(qualified, f"{vendor} {product}".strip())
+        if product.startswith(f"{vendor} "):
+            add(plain, product[len(vendor) + 1:])
+
+    plain.discard("")
+    qualified.discard("")
+    return plain, qualified
+
+
+def _is_version_word(word: str) -> bool:
+    """Is this trailing word a version rather than part of the name?"""
+    return bool(word) and (
+        word.isdigit()
+        or word in ("version", "v")
+        or (word[0].isdigit() and any(c.isdigit() for c in word))
+    )
+
+
+def _drop_version_tail(name: str) -> str:
+    """"windows 10" -> "windows"; "fortipam chrome extension" unchanged.
+
+    Only trailing version words go. A name that is nothing but a version is
+    returned unchanged rather than emptied.
+    """
+    words = name.split()
+    while len(words) > 1 and _is_version_word(words[-1]):
+        words.pop()
+    return " ".join(words)
+
+
+def _raw_reach_pairs(item: Any) -> list[tuple[str, str]]:
+    """The (vendor, product) pairs reach may be scored on, as the feed wrote them.
+
+    Two sources, both of them claims a feed vouches for:
+
+      * `vulnerable_cpes` -- CPEs NVD marks vulnerable, the authoritative set;
+      * a KEV row's own `vendor`/`product` fields, which name the software
+        directly and are how the live catalogue describes 1721 exploited bugs.
+
+    `cna_products` is NOT here: it is the cap's evidence, not reach's -- see
+    `_reach_surfaces`. A platform CPE is not here either; it is the stack the
+    vulnerable product runs on, not the software with the bug.
+
+    Punctuation is kept as the feed wrote it, because the caller has to tell
+    "Net-IDN-Encode" from ".NET Framework" and `_normalise` cannot. Two pairs
+    are the same pair when they normalise the same way, so a CPE and a KEV row
+    naming one product are not listed twice.
+    """
+    pairs: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(vendor: Any, product: Any) -> None:
+        vendor, product = str(vendor or ""), str(product or "")
+        key = (_normalise(vendor), _normalise(product))
+        if key == ("", "") or key in seen:
+            return
+        seen.add(key)
+        pairs.append((vendor, product))
+
+    for criteria in _as_strings(_get(item, "vulnerable_cpes", ())):
+        add(*_cpe_vendor_product(criteria))
+
+    kev_vendor = _get(item, "vendor", "")
+    kev_product = _get(item, "product", "")
+    if isinstance(kev_vendor, str) or isinstance(kev_product, str):
+        add(kev_vendor if isinstance(kev_vendor, str) else "",
+            kev_product if isinstance(kev_product, str) else "")
+
+    return pairs
 
 
 def _as_strings(value: Any) -> list[str]:
