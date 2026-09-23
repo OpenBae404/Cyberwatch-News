@@ -49,6 +49,7 @@ __all__ = [
     "ReachTable",
     "RankedItem",
     "load_reach_table",
+    "product_keys",
     "rank_news",
     "severity_band",
 ]
@@ -195,9 +196,11 @@ class RankedItem:
     reach_match: str = ""
     kev: Any = None                      # KevEntry when tier 1, else None
     reach_source: str = field(default="", repr=False)
-    # (vendor, product) of every CPE NVD marks vulnerable, lowercased. The key
-    # the one-per-product cap dedupes on; empty when the item names no
-    # vulnerable CPE, which exempts it from the cap entirely.
+    # Normalised (vendor, product) pairs naming the software this CVE is in,
+    # from every structured source the feed offers: the vulnerable CPEs, the
+    # CNA `affected` rows, and the KEV row's own vendor/product. The key the
+    # one-per-product cap dedupes on; empty when no source names a product,
+    # which exempts the item from the cap entirely.
     product_keys: tuple[tuple[str, str], ...] = ()
 
     @property
@@ -263,9 +266,10 @@ def _cap_one_per_product(ranked: Sequence[RankedItem], limit: int) -> list[Ranke
     shorter. Ship short, never pad: the alternative is filling the gap with an
     item the ranker already judged less worth knowing.
 
-    The keys come from `vulnerable_cpes` only, and an item with none has no
-    product key at all -- it is never capped against anything, because the
-    ranker cannot tell whether two unlabelled items are the same software.
+    The keys come from `product_keys` -- the vulnerable CPEs, the CNA affected
+    rows, and the KEV row's vendor/product. An item that no source names has no
+    product key at all and is never capped against anything, because the ranker
+    cannot tell whether two unlabelled items are the same software.
     """
     chosen: list[RankedItem] = []
     used: set[tuple[str, str]] = set()
@@ -312,10 +316,7 @@ def _rank_one(item: Any, lookup, table: ReachTable) -> RankedItem:
         reach_match=reach_match,
         kev=kev_entry,
         reach_source=table.source,
-        product_keys=tuple(
-            (vendor.lower(), product.lower())
-            for vendor, product in _vulnerable_vendor_products(item)
-        ),
+        product_keys=product_keys(item),
     )
 
 
@@ -508,13 +509,65 @@ def _cpe_vendor_product(criteria: str) -> tuple[str, str]:
     return "", ""
 
 
+def product_keys(item: Any) -> tuple[tuple[str, str], ...]:
+    """Normalised (vendor, product) keys naming the software this CVE is in.
+
+    Read from every STRUCTURED source the feed offers, in order of how much
+    NVD has vouched for it:
+
+      1. `vulnerable_cpes` -- NVD's own applicability analysis, best evidence
+      2. `cna_products`    -- the vendor/product fields of the CNA's `affected`
+                              rows, which exist on a CVE long before NVD has
+                              analysed it into CPEs
+      3. `vendor`/`product` -- the KEV row's own fields, for items fetched by id
+
+    Keying the cap on (1) alone left it inert on exactly the days it is needed:
+    on the AG-8 recorded window not one of 600 CVEs carried a vulnerable CPE,
+    so a quiet KEV day shipped four Adobe Connect advisories as four of five
+    items. (2) is a structured field, not free text -- it is read here for the
+    cap and never added to the reach match surface, which is the separate
+    defect AG-14 owns.
+
+    Normalisation is `_normalise`, the same one the reach tokens use, so the
+    CPE spelling `adobe:adobe_connect` and the CNA spelling `Adobe` /
+    `Adobe Connect` produce the same key and collide as they should.
+
+    An item no source names -- no CPE, no CNA row, no KEV fields -- returns an
+    empty tuple and is exempt from the cap: the ranker cannot tell whether two
+    unlabelled items are the same software, and guessing would drop real news.
+    """
+    keys: list[tuple[str, str]] = []
+    seen: set[tuple[str, str]] = set()
+
+    def add(vendor: Any, product: Any) -> None:
+        key = (_normalise(vendor), _normalise(product))
+        if not key[0] and not key[1]:
+            return
+        if key in seen:
+            return
+        seen.add(key)
+        keys.append(key)
+
+    for vendor, product in _vulnerable_vendor_products(item):
+        add(vendor, product)
+
+    for pair in _get(item, "cna_products", ()) or ():
+        if isinstance(pair, (tuple, list)) and len(pair) == 2:
+            add(pair[0], pair[1])
+
+    kev_vendor = _get(item, "vendor", "")
+    kev_product = _get(item, "product", "")
+    if isinstance(kev_vendor, str) and isinstance(kev_product, str):
+        add(kev_vendor, kev_product)
+
+    return tuple(keys)
+
+
 def _vulnerable_vendor_products(item: Any) -> list[tuple[str, str]]:
     """(vendor, product) for each CPE NVD marks vulnerable, in feed order.
 
-    Only `vulnerable_cpes` is read. An item that carries none -- a KEV row, a
-    mapping fixture, a CVE with no applicability data -- yields an empty list,
-    and both callers treat that as "no product known" rather than guessing one
-    from the platform CPEs.
+    Only `vulnerable_cpes` is read -- the CPE half of `product_keys`, and the
+    whole of the reach match surface. A platform CPE is never either.
     """
     pairs: list[tuple[str, str]] = []
     seen: set[tuple[str, str]] = set()

@@ -48,7 +48,25 @@ class FakeItem:
     affected_products: tuple[str, ...] = ()
     vulnerable_cpes: tuple[str, ...] = ()
     platform_cpes: tuple[str, ...] = ()
+    cna_products: tuple[tuple[str, str], ...] = ()
     cpe_criteria: tuple[str, ...] = ()
+    published: datetime | None = NOW
+    description: str = ""
+
+
+@dataclass(frozen=True)
+class FakeKevShapedItem:
+    """An item that names its software only the way a KEV row does.
+
+    KEV items reach the ranker fetched by id, and the fields the catalogue
+    guarantees are `vendor` and `product` -- not a CPE and not a CNA row.
+    """
+
+    cve_id: str
+    vendor: str = ""
+    product: str = ""
+    cvss_severity: str | None = "HIGH"
+    cvss_score: float | None = 7.0
     published: datetime | None = NOW
     description: str = ""
 
@@ -485,6 +503,117 @@ class TestOneItemPerProduct(unittest.TestCase):
         self.assertEqual(len(rank_news(items, None, reach=small_table())), MAX_ITEMS)
 
 
+class TestProductKeysFromEveryStructuredSource(unittest.TestCase):
+    """The cap must not go inert on a CVE NVD has not analysed into CPEs.
+
+    On the AG-8 recorded window not one of 600 CVEs carried a vulnerable CPE,
+    so a CPE-only cap dropped nothing and a quiet KEV day shipped four Adobe
+    Connect advisories out of five items. The keys therefore also come from the
+    CNA `affected` rows, which a CVE carries from the day it is filed.
+    """
+
+    def test_a_cna_row_alone_gives_the_item_a_product_key(self):
+        item = FakeItem("CVE-2026-8801", "HIGH", 7.0,
+                        cna_products=(("Adobe", "Adobe Connect"),))
+        ranked = rank_news([item], None, reach=small_table())[0]
+        self.assertEqual(ranked.product_keys, (("adobe", "adobe connect"),))
+
+    def test_two_cna_rows_in_one_product_ship_one_item(self):
+        """The defect sentence: four Adobe Connect advisories are one slot."""
+        items = [
+            FakeItem(f"CVE-2026-88{n:02d}", "CRITICAL", 9.3,
+                     cna_products=(("Adobe", "Adobe Connect"),))
+            for n in range(4)
+        ]
+        ranked = rank_news(items, None, reach=small_table())
+        self.assertEqual(len(ranked), 1)
+
+    def test_a_cna_key_collides_with_the_cpe_spelling_of_the_same_product(self):
+        """`adobe:adobe_connect` and `Adobe` / `Adobe Connect` are one product."""
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-8811", "CRITICAL", 9.8,
+                         vulnerable_cpes=(cpe("adobe", "adobe_connect"),)),
+                FakeItem("CVE-2026-8812", "HIGH", 7.0,
+                         cna_products=(("Adobe", "Adobe Connect"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-8811"])
+
+    def test_one_vendor_two_cna_products_both_survive(self):
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-8821", "HIGH", 7.0,
+                         cna_products=(("Adobe", "Adobe Connect"),)),
+                FakeItem("CVE-2026-8822", "HIGH", 7.0,
+                         cna_products=(("Adobe", "Campaign Classic"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(len(ranked), 2)
+
+    def test_an_item_with_no_product_from_any_source_is_still_exempt(self):
+        """No CPE, no CNA row, no KEV fields: never capped, never guessed at."""
+        items = [FakeItem(f"CVE-2026-88{n:02d}", "HIGH", 7.0) for n in range(30, 35)]
+        ranked = rank_news(items, None, reach=small_table())
+        self.assertEqual(len(ranked), 5)
+        self.assertTrue(all(r.product_keys == () for r in ranked))
+
+    def test_an_empty_cna_row_creates_no_key(self):
+        """A row NVD filled with "n/a" must not become a key every CVE shares."""
+        items = [
+            FakeItem(f"CVE-2026-88{n:02d}", "HIGH", 7.0, cna_products=(("", ""),))
+            for n in range(40, 45)
+        ]
+        ranked = rank_news(items, None, reach=small_table())
+        self.assertEqual(len(ranked), 5)
+        self.assertTrue(all(r.product_keys == () for r in ranked))
+
+    def test_a_cna_row_never_reaches_the_reach_match_surface(self):
+        """Structured keys for the cap, and nothing more: reach is untouched.
+
+        `windows` is weight 100 in the test table. A CNA row naming it must
+        score zero, because a CNA row is not evidence NVD has vouched for.
+        """
+        ranked = rank_news(
+            [FakeItem("CVE-2026-8850", "HIGH", 7.0,
+                      cna_products=(("Microsoft", "Windows"),))],
+            None,
+            reach=small_table(),
+        )[0]
+        self.assertEqual(ranked.reach, 0)
+        self.assertEqual(ranked.reach_match, "")
+
+    def test_a_kev_rows_own_vendor_and_product_are_a_key(self):
+        """KEV items are fetched by id and may carry only these two fields."""
+        ranked = rank_news(
+            [
+                FakeKevShapedItem("CVE-2026-8861", "Ivanti", "Connect Secure"),
+                FakeKevShapedItem("CVE-2026-8862", "Ivanti", "Connect Secure"),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual(len(ranked), 1)
+        self.assertEqual(ranked[0].product_keys, (("ivanti", "connect secure"),))
+
+    def test_the_cap_still_keeps_the_better_ranked_cna_item(self):
+        ranked = rank_news(
+            [
+                FakeItem("CVE-2026-8871", "LOW", 2.0,
+                         cna_products=(("Adobe", "Adobe Connect"),)),
+                FakeItem("CVE-2026-8872", "CRITICAL", 9.8,
+                         cna_products=(("Adobe", "Adobe Connect"),)),
+            ],
+            None,
+            reach=small_table(),
+        )
+        self.assertEqual([r.cve_id for r in ranked], ["CVE-2026-8872"])
+
+
 # --------------------------------------------------------------------------- #
 # every item carries its reason
 # --------------------------------------------------------------------------- #
@@ -818,6 +947,64 @@ class TestPlatformCpeReachEndToEnd(unittest.TestCase):
     def test_the_product_key_comes_from_the_vulnerable_cpe_only(self):
         ranked = rank_news([self.parsed()], None)[0]
         self.assertEqual(ranked.product_keys, (("acronis", "backup"),))
+
+
+# --------------------------------------------------------------------------- #
+# the quiet-KEV defect, end to end through the real NVD parser
+# --------------------------------------------------------------------------- #
+
+def adobe_entry(cve_id: str) -> dict[str, Any]:
+    """An Adobe Connect advisory as NVD served it in the AG-8 recorded window.
+
+    The shape that made the cap inert: a CNA `affected` row naming the product,
+    and no `configurations` block at all, because NVD has not analysed it yet.
+    Built from the raw NVD 2.0 shape, not a FakeItem, because the defect is in
+    what the parser keeps.
+    """
+    return {"cve": {
+        "id": cve_id,
+        "published": "2026-09-20T00:00:00.000",
+        "lastModified": "2026-09-20T00:00:00.000",
+        "descriptions": [{"lang": "en", "value": "A flaw in Adobe Connect."}],
+        "metrics": {"cvssMetricV31": [{"cvssData": {
+            "baseSeverity": "CRITICAL", "baseScore": 9.3, "version": "3.1",
+            "vectorString": "CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H"}}]},
+        "affected": [{"source": "psirt@adobe.com", "affectedData": [
+            {"vendor": "Adobe", "product": "Adobe Connect",
+             "versions": [{"version": "12.9", "status": "affected"}]},
+        ]}],
+    }}
+
+
+class TestQuietKevDayEndToEnd(unittest.TestCase):
+    """Four advisories in one product must not fill four of five slots."""
+
+    def parsed(self, cve_id: str) -> Any:
+        from src.sources.nvd import parse_vulnerability
+
+        item = parse_vulnerability(adobe_entry(cve_id))
+        assert item is not None
+        return item
+
+    def test_the_parser_keeps_the_cna_row_as_a_structured_pair(self):
+        self.assertEqual(self.parsed("CVE-2026-75682").cna_products,
+                         (("Adobe", "Adobe Connect"),))
+
+    def test_a_cve_with_no_cpe_data_still_carries_a_product_key(self):
+        ranked = rank_news([self.parsed("CVE-2026-75682")], None)[0]
+        self.assertEqual(ranked.vulnerable_cpes, ())
+        self.assertEqual(ranked.product_keys, (("adobe", "adobe connect"),))
+
+    def test_four_adobe_connect_advisories_ship_as_one_item(self):
+        items = [self.parsed(f"CVE-2026-756{n:02d}") for n in (82, 89, 97, 98)]
+        ranked = rank_news(items, None)
+        self.assertEqual(len(ranked), 1)
+
+    def test_the_parser_does_not_put_the_cna_row_on_the_reach_surface(self):
+        """The reach score is whatever the display label already produced."""
+        item = self.parsed("CVE-2026-75682")
+        self.assertEqual(item.affected_products, ("Adobe Adobe Connect",))
+        self.assertEqual(rank_news([item], None)[0].reach_match, "")
 
 
 if __name__ == "__main__":

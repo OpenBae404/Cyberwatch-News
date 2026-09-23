@@ -55,6 +55,12 @@ class NvdItem:
     affected_products: tuple[str, ...] = ()   # "vendor product" strings, DISPLAY ONLY
     vulnerable_cpes: tuple[str, ...] = ()     # cpeMatch entries NVD marks vulnerable
     platform_cpes: tuple[str, ...] = ()       # every other CPE -- context, never a match surface
+    # (vendor, product) exactly as the CNA filed it, one per `affected` row.
+    # Structured pairs, NOT free text: the one-per-product cap reads them so it
+    # still works on the CVEs NVD has not analysed into CPEs yet. Never a reach
+    # match surface -- reach is scored on `affected_products` and the vulnerable
+    # CPEs, and nothing here changes that.
+    cna_products: tuple[tuple[str, str], ...] = ()
     cpe_criteria: tuple[str, ...] = ()        # raw cpe:2.3:... strings (vulnerable + platform)
     vuln_status: str | None = None
     source_identifier: str | None = None
@@ -221,7 +227,7 @@ def parse_vulnerability(entry: dict[str, Any]) -> NvdItem | None:
         return None
 
     severity, score, version, vector = _best_metric(cve.get("metrics") or {})
-    products, vulnerable_cpes, platform_cpes = _extract_products(cve)
+    products, vulnerable_cpes, platform_cpes, cna_products = _extract_products(cve)
 
     return NvdItem(
         cve_id=cve_id,
@@ -235,6 +241,7 @@ def parse_vulnerability(entry: dict[str, Any]) -> NvdItem | None:
         affected_products=products,
         vulnerable_cpes=vulnerable_cpes,
         platform_cpes=platform_cpes,
+        cna_products=cna_products,
         # Union of both sets, order preserved: the existing ranker and renderer
         # still read this. Task 4 of the plan retires it; until then it must not
         # change shape.
@@ -288,10 +295,10 @@ def _best_metric(
 
 def _extract_products(
     cve: dict[str, Any],
-) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...]]:
+) -> tuple[tuple[str, ...], tuple[str, ...], tuple[str, ...], tuple[tuple[str, str], ...]]:
     """Split a CVE's CPEs by NVD's `vulnerable` flag.
 
-    Returns ``(products, vulnerable, platform)``:
+    Returns ``(products, vulnerable, platform, cna_products)``:
 
       * ``products``  -- human-readable "vendor product" labels, display only.
                          Built from CNA-supplied `affected` rows and from
@@ -301,6 +308,10 @@ def _extract_products(
       * ``vulnerable`` -- cpeMatch entries NVD marks ``vulnerable: true``
       * ``platform``   -- every other CPE: the stack the vulnerable product runs
                           on, plus CNA-supplied CPEs that carry no flag at all
+      * ``cna_products`` -- ``(vendor, product)`` as the CNA filed it, one pair
+                         per `affected` row. Structured, so the one-per-product
+                         cap can key on it; the row's free text never becomes a
+                         reach match surface, which is the separate defect.
 
     A missing flag is treated as NOT vulnerable. Assuming otherwise is how a
     platform CPE ends up on the match surface and a Dell agent gets reported
@@ -309,6 +320,7 @@ def _extract_products(
     products: list[str] = []
     vulnerable: list[str] = []
     platform: list[str] = []
+    cna_products: list[tuple[str, str]] = []
 
     # CNA-supplied vendor/product blocks. Live NVD 2.0 records nest the rows
     # under `affected[].affectedData[]`; some carry vendor/product directly.
@@ -324,6 +336,17 @@ def _extract_products(
             label = _label(row.get("vendor"), row.get("product") or row.get("packageName"))
             if label:
                 products.append(label)
+            # The same row, kept as a structured pair for the product cap. A
+            # CVE NVD has not analysed yet has no vulnerable CPE at all, and
+            # keying the cap on CPEs alone made it inert exactly there -- four
+            # Adobe Connect advisories filled an issue because none of them
+            # carried a CPE to collide on.
+            pair = (
+                _clean(row.get("vendor")),
+                _clean(row.get("product") or row.get("packageName")),
+            )
+            if pair[0] or pair[1]:
+                cna_products.append(pair)
             # CNA rows carry no `vulnerable` flag, so they cannot be trusted as
             # a match surface -- they land in platform with the rest.
             for criteria in row.get("cpes") or []:
@@ -357,6 +380,7 @@ def _extract_products(
         tuple(dict.fromkeys(products)),
         tuple(dict.fromkeys(vulnerable)),
         tuple(dict.fromkeys(platform)),
+        tuple(dict.fromkeys(cna_products)),
     )
 
 
