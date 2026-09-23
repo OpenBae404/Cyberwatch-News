@@ -94,7 +94,13 @@ def audit(chosen, all_ranked, limit: int) -> dict:
         plat_surface = _cpe_surface(platform)
         label_surface = _surface(labels)
 
-        token = item.reach_match
+        # The token arrives from the reach file verbatim ("big-ip"); every
+        # surface above has been through `_normalise` ("big ip"). Comparing the
+        # two without normalising the token makes any hyphenated or punctuated
+        # token untraceable on every surface, so the audit reports a
+        # FAIL-untraceable for a reach figure that is in fact sitting in the
+        # vulnerable CPE. Normalise both sides or the instrument invents faults.
+        token = _normalise(item.reach_match) if item.reach_match else ""
         padded = f" {token} " if token else ""
         in_vuln = bool(token) and padded in vuln_surface
         in_label = bool(token) and padded in label_surface

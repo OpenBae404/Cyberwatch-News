@@ -78,6 +78,36 @@ class TestVerdicts(unittest.TestCase):
         self.assertEqual(report["items"][0]["verdict"], "no-reach")
         self.assertTrue(report["pass"])
 
+    def test_reach_token_keeps_its_file_punctuation_and_still_traces(self):
+        """The reach file's token is `big-ip`; CPE surfaces read `big ip`.
+
+        Every other test here hands `audit()` a token that is already in
+        normalised form, so none of them can see the instrument comparing a
+        raw token against a normalised surface. On the live feed that mismatch
+        turned a reach figure sitting plainly in the vulnerable CPE into
+        FAIL-untraceable -- a fault the audit invented, not one it found.
+        """
+        item = FakeItem(
+            "CVE-2026-94127", 56, "big-ip",
+            vulnerable=["cpe:2.3:a:f5:big-ip_access_policy_manager:*:*:*:*:*:*:*:*"],
+            labels=["F5 BIG-IP Access Policy Manager"],
+            product_keys=[("f5", "big-ip_access_policy_manager")],
+        )
+        report = one(item)
+        self.assertEqual(report["items"][0]["verdict"], "ok-vulnerable-cpe")
+        self.assertTrue(report["pass"])
+
+    def test_a_punctuated_token_can_still_fail(self):
+        """Normalising the token must not turn the check into a rubber stamp."""
+        item = FakeItem(
+            "CVE-2026-94127", 56, "big-ip",
+            vulnerable=["cpe:2.3:a:acronis:acronis_backup:*:*:*:*:*:*:*:*"],
+            labels=["F5 BIG-IP"],
+        )
+        report = one(item)
+        self.assertEqual(report["items"][0]["verdict"], "FAIL-label-only")
+        self.assertFalse(report["pass"])
+
     def test_reach_from_platform_cpe_fails(self):
         """CVE-2026-87886's shape: reach scored off a vulnerable:false CPE."""
         item = FakeItem(
