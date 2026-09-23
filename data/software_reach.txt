@@ -37,6 +37,15 @@
 #   A token may also be written "vendor product" ("google chrome", "linux
 #   kernel") and then matches the vendor-qualified spelling of the name.
 #
+#   A feed splits a name across its two fields wherever it likes: KEV writes
+#   WordPress core as "WordPress / Core" and PHP's FPM as "PHP / FastCGI
+#   Process Manager". So a product token that is exactly the VENDOR word of a
+#   row matches that row -- "wordpress" scores "WordPress / Core" at 41 --
+#   unless this file also writes that name as a vendor: or brand: line, which
+#   is this file saying the name is a company and not software. That is what
+#   keeps "Fortinet / FortiWeb Cloud Connector" and "Red Hat / Build of
+#   Keycloak" unrated: fortinet and red hat are vendor: lines here.
+#
 # A COMPANY IS NOT SOFTWARE -- vendor:, brand: and <vendor>/<product>
 #   "cisco" as a plain token would lead every product name Cisco ships, so a
 #   Cisco IP camera would carry IOS's 60. That is the same over-reach one
@@ -86,7 +95,10 @@
                               # KEV files under the Android vendor itself
                               # ("Android / Framework"). Every row that vendor
                               # files IS the mobile OS, which is what makes it
-                              # a brand and not a vendor line.
+                              # a brand and not a vendor line. It is the one
+                              # name written both ways; both are 97, so the
+                              # brand line simply does the vendor-word work the
+                              # product token is not allowed to do here.
 96   openssl
 95   iphone os, apple/ios, apple/ipados   # three spellings of Apple's phone
                               # OS: the CPE name, and the KEV names scoped to
@@ -196,9 +208,11 @@
 44   dotnet
 43   log4j, log4j2            # the CPE/CNA spelling of the same library
 42   spring framework
-41   wordpress                # WordPress core. A plugin is published under its
-                              # own vendor and its own name, so it cannot lead
-                              # with this token.
+41   wordpress                # WordPress core, and the plugins KEV files under
+                              # the WordPress vendor ("WordPress / File Manager
+                              # Plugin"): a plugin runs inside a core install,
+                              # so the reach question -- how many readers are
+                              # touched -- is answered by core either way.
 40   drupal
 39   joomla
 38   git

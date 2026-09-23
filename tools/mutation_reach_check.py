@@ -36,6 +36,18 @@ MUTATIONS = [
         "                    (not entry.scope or candidate.vendor == entry.scope)",
         "                    True",
     ),
+    (
+        "any token may lead its vendor word (vendor wildcards come back)",
+        "src/news_rank.py",
+        "                vendor_word_ok = entry.token not in company_names",
+        "                vendor_word_ok = True",
+    ),
+    (
+        "no token may lead its vendor word (WordPress/Core unrated again)",
+        "src/news_rank.py",
+        "                vendor_word_ok = entry.token not in company_names",
+        "                vendor_word_ok = False",
+    ),
 ]
 
 failures = []

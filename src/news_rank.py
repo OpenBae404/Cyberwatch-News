@@ -39,6 +39,7 @@ from __future__ import annotations
 import re
 from dataclasses import dataclass, field
 from datetime import date, datetime, timezone
+from functools import cached_property
 from pathlib import Path
 from typing import Any, Iterable, Mapping, Sequence
 
@@ -128,6 +129,22 @@ class ReachTable:
     entries: tuple[ReachEntry, ...]
     source: str = ""
 
+    @cached_property
+    def company_names(self) -> frozenset[str]:
+        """Names this file writes as a company (`vendor:` or `brand:`).
+
+        The file is the only place that knows whether a word is a company or a
+        piece of software, and it already says so: `vendor:apache` and
+        `brand:android` are companies, `41 wordpress` and `84 php` are
+        software. A product token that is exactly a candidate's vendor word
+        may lead that name only when the file does NOT also list it here --
+        which is why "WordPress / Core" is 41 while "Fortinet / FortiWeb Cloud
+        Connector" stays unrated.
+        """
+        return frozenset(
+            entry.token for entry in self.entries if entry.kind in ("vendor", "brand")
+        )
+
     def score(self, item: Any) -> tuple[int, str]:
         """Highest reach weight this item matches, and the token that matched.
 
@@ -147,12 +164,20 @@ class ReachTable:
         weakest product. A scoped token (`cisco/ios`) matches only under the
         vendor that ships it, so Apple's iOS is never scored as Cisco's.
 
+        A feed is free to split a name across its two fields, so software the
+        file prices by name can arrive with that name in the VENDOR field:
+        KEV writes WordPress core as ("WordPress", "Core"). A product token
+        may therefore lead the vendor-qualified spelling of a name -- unless
+        the file also writes that same name as a `vendor:` or `brand:` line,
+        which is the file saying the name is a company, not software.
+
         No match is ``(0, "")`` -- unknown reach, not zero reach. It only ever
         costs an item a tie-break, never a tier.
         """
         surface = _reach_surfaces(item)
         if not (surface.candidates or surface.bare_vendors):
             return 0, ""
+        company_names = self.company_names
         best_weight = 0
         best_token = ""
         for entry in self.entries:
@@ -178,9 +203,10 @@ class ReachTable:
                 # catalogue runs from the core of the internet down to a
                 # webcam is written `vendor:cisco` and never reaches this
                 # branch.
+                vendor_word_ok = entry.token not in company_names
                 matched = any(
                     (not entry.scope or candidate.vendor == entry.scope)
-                    and candidate.leads_with(entry.token)
+                    and candidate.leads_with(entry.token, vendor_word_ok)
                     for candidate in surface.candidates
                 )
             if matched:
@@ -668,22 +694,38 @@ class _ReachCandidate:
                matches any of them from the START.
     qualified  the same names with the vendor in front, so a table entry
                spelled "google chrome" or "linux kernel" matches. A token that
-               is only the vendor word never matches here: "Red Hat Build of
-               Keycloak" must not score as "red hat", or the vendor over-reach
-               the `vendor:` mechanism exists to forbid simply comes back in
-               through the front of the name.
+               is ONLY the vendor word may use this set only when the FILE says
+               it may -- see `leads_with`.
     """
 
     vendor: str
     names: frozenset[str]
     qualified: frozenset[str] = frozenset()
 
-    def leads_with(self, token: str) -> bool:
+    def leads_with(self, token: str, vendor_word_ok: bool = False) -> bool:
+        """Does any name of this product start with `token`?
+
+        `vendor_word_ok` decides the one ambiguous case: a token that is
+        exactly this candidate's vendor word. A feed splits a name across two
+        fields wherever it likes -- KEV files WordPress core as
+        ("WordPress", "Core") and PHP's FPM as ("PHP", "FastCGI Process
+        Manager") -- so refusing the vendor word outright makes `41 wordpress`
+        and `84 php` unmatchable no matter what the file says about them.
+        Allowing it for every company brings back the over-reach the
+        `vendor:` mechanism exists to forbid, where "Red Hat Build of
+        Keycloak" is 79 and "Fortinet FortiWeb Cloud Connector" is 62.
+
+        So the FILE decides, exactly as it does one level up: a name written
+        `vendor:` or `brand:` is a company and never leads a product name
+        (`ReachTable.score` passes `vendor_word_ok=False` for it); a name the
+        file prices as a plain product token is software, and the row that
+        files it under its own name is that software.
+        """
         if any(_name_leads_with(name, token) for name in self.names):
             return True
-        if not self.vendor or not token.startswith(f"{self.vendor} "):
-            # only a token that reaches PAST the vendor word may use the
-            # vendor-qualified spelling
+        if not self.vendor:
+            return False
+        if not (token.startswith(f"{self.vendor} ") or (vendor_word_ok and token == self.vendor)):
             return False
         return any(_name_leads_with(name, token) for name in self.qualified)
 

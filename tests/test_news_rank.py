@@ -1191,15 +1191,132 @@ class TestTheShippedReachFile(unittest.TestCase):
                 self.assertEqual(cisco_only.score(NamedRow("Apple", product)), (0, ""))
 
     def test_every_token_in_the_file_is_reachable(self):
-        """A token nobody can match is a weight that silently does nothing."""
+        """A token nobody can match is a weight that silently does nothing.
+
+        The row is built the way a feed writes one -- the token in the PRODUCT
+        field, the vendor field carrying only a scope the file itself asked
+        for. Putting the token in both fields would let the vendor-word rule
+        satisfy this test for a token the product rule cannot reach, which is
+        how a `41 wordpress` that scored nothing live passed here before.
+        """
         for entry in self.table.entries:
             with self.subTest(token=entry.token, kind=entry.kind):
                 if entry.kind == "product":
-                    vendor = entry.scope or entry.token.split()[0]
-                    row = NamedRow(vendor, entry.token)
+                    row = NamedRow(entry.scope, entry.token)
                 else:
                     row = NamedRow(entry.token, "Multiple Products")
                 self.assertGreater(self.table.score(row)[0], 0)
+
+
+class TestSoftwareNamedInTheVendorField(unittest.TestCase):
+    """A feed chooses which half of a name goes in which field.
+
+    KEV files WordPress core as ("WordPress", "Core") and PHP's FPM as
+    ("PHP", "FastCGI Process Manager (FPM)") -- the software this table prices
+    by name is in the VENDOR field and the product field holds a component.
+    Refusing the vendor word outright made `41 wordpress`, `84 php`,
+    `52 gitlab`, `40 drupal`, `52 jenkins`, `80 openbsd` and `76 docker`
+    unmatchable against the live catalogue while the file still priced them.
+
+    Every row below is a real live CISA KEV row shape, quoted in the card.
+    """
+
+    @classmethod
+    def setUpClass(cls):
+        cls.table = load_reach_table(DEFAULT_REACH_FILE)
+
+    def score(self, vendor, product):
+        return self.table.score(NamedRow(vendor, product))
+
+    # --- software the file names, filed under its own name ------------------ #
+
+    def test_wordpress_core_scores_wordpress(self):
+        """CVE-2026-60137, CVE-2026-63030, CVE-2018-7602-era rows."""
+        self.assertEqual(self.score("WordPress", "Core"), (41, "wordpress"))
+
+    def test_drupal_core_scores_drupal(self):
+        """CVE-2019-6340."""
+        self.assertEqual(self.score("Drupal", "Core"), (40, "drupal"))
+
+    def test_gitlab_ce_and_ee_scores_gitlab(self):
+        """CVE-2021-22205."""
+        self.assertEqual(
+            self.score("GitLab", "Community and Enterprise Editions"), (52, "gitlab"))
+
+    def test_php_fpm_scores_php(self):
+        """CVE-2019-11043."""
+        self.assertEqual(
+            self.score("PHP", "FastCGI Process Manager (FPM)"), (84, "php"))
+
+    def test_openbsd_opensmtpd_scores_openbsd(self):
+        """CVE-2020-7247."""
+        self.assertEqual(self.score("OpenBSD", "OpenSMTPD"), (80, "openbsd"))
+
+    def test_docker_desktop_scores_docker(self):
+        """CVE-2019-15752."""
+        self.assertEqual(
+            self.score("Docker", "Desktop Community Edition"), (76, "docker"))
+
+    def test_jenkins_plugin_scores_jenkins(self):
+        """CVE-2019-1003029: a plugin runs inside the server it plugs into."""
+        self.assertEqual(
+            self.score("Jenkins", "Script Security Plugin"), (52, "jenkins"))
+
+    # --- and the company names that must still NOT lead a product ----------- #
+
+    def test_a_vendor_line_still_never_leads_a_named_product(self):
+        for vendor, product in (
+            ("Fortinet", "FortiWeb Cloud Connector"),
+            ("Fortinet", "FortiPAM Chrome Extension"),
+            ("Red Hat", "Build of Keycloak"),
+            ("Apple", "Xcode Server"),
+            ("Cisco", "Small Business RV Series Routers"),
+            ("Apache", "MINA"),
+            ("Oracle", "Agile PLM"),
+        ):
+            with self.subTest(vendor=vendor, product=product):
+                self.assertEqual(self.score(vendor, product), (0, ""))
+
+    def test_the_file_decides_which_names_are_companies(self):
+        """The rule reads the file, it does not carry its own list."""
+        self.assertIn("fortinet", self.table.company_names)
+        self.assertIn("red hat", self.table.company_names)
+        self.assertNotIn("wordpress", self.table.company_names)
+        self.assertNotIn("php", self.table.company_names)
+
+    def test_a_name_written_both_ways_is_still_a_company(self):
+        """The guard, on a file that spells one name as product AND vendor.
+
+        In the shipped file no name is written both ways except `android`,
+        where both lines are 97 and the ambiguity costs nothing. This builds
+        the case anyway, because the rule must be the file's to decide: a
+        `vendor:` line on a name disqualifies that name from leading a product,
+        even when the same name also appears as a plain product token.
+        """
+        with tempfile.NamedTemporaryFile("w", suffix=".txt", delete=False) as handle:
+            handle.write("62   fortinet, vendor:fortinet\n41   wordpress\n")
+            path = handle.name
+        table = load_reach_table(path)
+        self.assertEqual(table.score(NamedRow("Fortinet", "FortiWeb Cloud Connector")),
+                         (0, ""))
+        self.assertEqual(table.score(NamedRow("Fortinet", "Multiple Products")),
+                         (62, "fortinet"))
+        self.assertEqual(table.score(NamedRow("WordPress", "Core")), (41, "wordpress"))
+
+    def test_making_a_named_product_a_vendor_line_would_stop_it(self):
+        """Guard the premise: the vendor: line is what refuses the name.
+
+        Rewrite `41 wordpress` as a vendor line and the WordPress core row
+        loses it again -- so the rule is obeying the file, not a hard-coded
+        allowance for these seven names.
+        """
+        rewritten = ReachTable(entries=tuple(
+            ReachEntry(token=e.token, weight=e.weight, note=e.note,
+                       kind="vendor" if e.token == "wordpress" else e.kind,
+                       scope=e.scope)
+            for e in self.table.entries
+        ))
+        self.assertEqual(rewritten.score(NamedRow("WordPress", "Core")), (0, ""))
 
 
 if __name__ == "__main__":
