@@ -92,6 +92,30 @@ recorded there at all. `deploy/audit-allowlist.txt` is the written record of
 what was judged safe to publish, including the decision about `localhost`
 appearing in the source but never on the site.
 
+### Publishing it (one-time, by hand, after the audit passes)
+
+The repo has **no git remote**; nothing has ever been pushed. Run the audit
+above first -- it must print `CLEAR TO PUBLISH` -- then, in order:
+
+1. Create the public repo `OpenBae404/cyberwatch-news` on GitHub and add it:
+
+        git remote add origin https://github.com/OpenBae404/cyberwatch-news.git
+        git push -u origin master
+
+2. GitHub -> the repo -> **Settings -> Pages**. Source: *Deploy from a branch*,
+   branch `master`, folder `/docs`. No Actions workflow is used or wanted.
+
+3. DNS at the `asutera.dev` provider -- one record:
+
+        cyberwatch.asutera.dev.   CNAME   OpenBae404.github.io.
+
+   That target is the user's Pages host, not the repo name; `docs/CNAME`
+   already holds `cyberwatch.asutera.dev`, which is the other half of the same
+   setting. Once the record resolves, tick **Enforce HTTPS** on the Pages
+   settings page (the certificate can take a few minutes to issue).
+
+After that the daily launchd job commits and the site follows on the next push.
+
 
 ## Sources
 
