@@ -506,9 +506,15 @@ class LLMClient:
         return content
 
     def describe(self) -> str:
-        if self.available:
-            return f"local LLM at {self.base_url} (model: {self.model})"
-        return f"no LLM ({self.base_url}: {self.error})"
+        """Reader-facing, so it names no endpoint and no model.
+
+        This string is printed in the footer of every published issue. The
+        base URL is a host on the author's own network and the model name
+        describes their inference stack; neither tells a reader anything, and
+        both are reconnaissance in a repository whose front page is a security
+        newsletter. Use `base_url` and `model` directly for logs and probes.
+        """
+        return "a local LLM" if self.available else f"no LLM ({self.error})"
 
 
 # --------------------------------------------------------------------------- #
