@@ -46,6 +46,18 @@ The suite is two kinds of test:
                                             still prices losing its score is a
                                             regression, a vendor wildcard
                                             losing one is not
+           - tests/test_site.py            the static site: one page and one
+                                            index entry per issue, no markdown
+                                            marker on any page, a CVE
+                                            description full of angle brackets
+                                            escaped, feed.xml parses with one
+                                            item per issue, and a rebuild with
+                                            no new issue changes no byte
+           - tests/test_publish.py         the publish-time audit refuses each
+                                            kind of disclosure and cannot be
+                                            talked out of a credential; the
+                                            launchd plist parses and the daily
+                                            runner is valid bash
            - tools/mutation_check.py        breaks src/rank.py and checks the
                                             control goes red
 
@@ -98,6 +110,18 @@ OFFLINE = [
     # false positive the predicate actually produced once.
     ("audit: the reach-change diff can fail",
      ["-m", "unittest", "tests.test_kev_scored_diff", "-v"]),
+    # Delivery. The site is the only stage whose output is read by strangers, so
+    # its tests are about output rather than intent: one page per issue, no
+    # markdown marker on any page, a CVE description full of angle brackets
+    # escaped, a feed that parses, and a rebuild that changes no byte.
+    ("site: the static site is faithful, escaped and reproducible",
+     ["-m", "unittest", "tests.test_site", "-v"]),
+    # The publish-time audit and the launchd plist. The audit runs once, before
+    # this repo becomes public, so it is tested the way the KEV guard is: each
+    # kind of finding is planted and the audit must refuse it, and a secret must
+    # not be allowlistable.
+    ("publish: the public-repo audit can say no, and the plist parses",
+     ["-m", "unittest", "tests.test_publish", "-v"]),
     # Breaks the KEV-outage guard four ways on a throwaway copy and asserts the
     # entrypoint tests go red each time. In the suite on purpose: the guard's
     # whole job is to prevent a run that otherwise looks healthy, so a test
@@ -111,6 +135,14 @@ OFFLINE = [
     # under them is not holding the fix.
     ("mutation: the reach match rule is load-bearing",
      ["tools/mutation_reach_check.py"]),
+    # Breaks the site generator ten ways on a throwaway copy -- escape after
+    # formatting, publish the internal endpoint, take the feed date from the
+    # clock, leave an orphan page -- and asserts tests/test_site.py goes red
+    # each time. The escaping criterion especially needs this: an escaping test
+    # passes trivially against a generator whose hostile input never reaches the
+    # page.
+    ("mutation: the site generator's guarantees are load-bearing",
+     ["tools/mutation_site_check.py"]),
     # Breaks src/rank.py on a throwaway copy and asserts the control goes red.
     # In the suite on purpose: a control nobody re-proves is a control that
     # quietly stops working.

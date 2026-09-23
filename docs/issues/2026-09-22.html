@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-09-22</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-09-22">CyberWatch Newsletter -- 2026-09-22</h2>
+<p>5 items out of 611 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2025-39682">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2025-39682">CVE-2025-39682</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2025-09-05</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical flaw in the Linux kernel TLS implementation mishandles zero-length records on the receive list, potentially causing processing errors during recvmsg calls. The issue arises when an initial record from the receive list is zero length, bypassing expected type checks and loop breaks.</p>
+<p><strong>Who is affected:</strong> Users running the Linux kernel with TLS enabled are affected, including systems using Debian Linux and Siemens SIMATIC CN 4100 firmware.</p>
+<p><strong>How serious:</strong> This vulnerability is rated Critical with a CVSS score of 9.8, indicating it can lead to complete compromise of confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Apply the kernel updates provided in the linked stable git commits to resolve the TLS record handling defect. Ensure your distribution or firmware vendor has released the patched version for your specific environment.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Linux Kernel on 2026-09-18, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach 100/100 via &quot;linux kernel&quot;.</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-76460">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76460">CVE-2026-76460</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2026-09-16</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Cisco Identity Services Engine on 2026-09-16, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in the Cisco Identity Services Engine API allows unauthenticated remote attackers to bypass authentication controls. This flaw enables unauthorized access to the device by sending crafted requests to the affected API endpoint.</p>
+<p><strong>Who is affected:</strong> Organizations running Cisco Identity Services Engine Software or the Cisco ISE Passive Identity Connector are at risk.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a perfect CVSS score of 10.0, indicating full compromise of confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Administrators should review the official Cisco Security Advisory and apply the necessary patches or mitigations immediately.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Cisco Identity Services Engine on 2026-09-16, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach 60/100 via &quot;cisco&quot;.</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-94127">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-94127">CVE-2026-94127</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.3</code> <code>published 2026-09-22</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in F5 BIG-IP APM on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in F5 BIG-IP allows unauthenticated remote code execution when specific malicious traffic targets a virtual server configured with both an APM access policy and an OAuth profile.</p>
+<p><strong>Who is affected:</strong> Administrators running F5 BIG-IP systems, particularly those in Appliance mode, with the specified access policy and OAuth profile configuration.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.3, enabling full remote code execution by unauthenticated attackers without control plane exposure.</p>
+<p><strong>What to do:</strong> Review the official F5 support article K000162605 for mitigation steps and ensure your systems are updated or configured securely.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in F5 BIG-IP APM on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.3); reach 56/100 via &quot;big ip&quot;.</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2026-93616">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-93616">CVE-2026-93616</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-22</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> An unauthenticated attacker can exploit a directory traversal and file upload vulnerability to upload and execute arbitrary scripts on the Check Point Management Server.</p>
+<p><strong>Who is affected:</strong> Administrators running Check Point Quantum Security Management are at risk of remote code execution.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, allowing full system compromise without authentication.</p>
+<p><strong>What to do:</strong> Review the official Check Point security advisory and support article for immediate mitigation steps and patch information.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="5-known-exploited-cve-2026-85102">5. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-85102">CVE-2026-85102</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-09</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> An improper certificate trust validation flaw in Check Point Quantum Security Gateway allows unauthenticated remote attackers to execute arbitrary code during VPN negotiation.</p>
+<p><strong>Who is affected:</strong> Administrators and organizations using Check Point Quantum Security Gateway devices.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating a high risk of complete system compromise.</p>
+<p><strong>What to do:</strong> Review the official Check Point security advisory and support article for details on applying the necessary patches or mitigations.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<p><em>Summaries: 5/5 written by local LLM at [internal endpoint redacted] (model: a local model).</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>

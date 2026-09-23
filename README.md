@@ -42,6 +42,57 @@ Exit codes, so a scheduler can tell the failures apart:
 Nothing is written on a non-zero exit.
 
 
+## Publish it
+
+The issues in `issues/` are the source of truth; the website is generated from
+them and is not edited by hand.
+
+    python3 build_site.py            # write docs/ from issues/
+    python3 build_site.py --check    # write nothing; exit 3 if docs/ is stale
+
+`docs/` is what GitHub Pages serves from `master` -- one HTML page per issue, an
+index, `feed.xml`, a stylesheet, `.nojekyll`, and a `CNAME` for
+`cyberwatch.asutera.dev`. There is no Actions workflow: the site is built on the
+Mac that builds the issue and committed as ordinary files.
+
+Three properties the generator holds, each with a test behind it in
+`tests/test_site.py` and a mutant behind that in `tools/mutation_site_check.py`:
+
+  * **Text is escaped before markup is emitted.** NVD descriptions quote
+    attacker input; a description containing `<script>` or an `onerror=`
+    attribute reaches the page as visible text and never as an element.
+  * **The internal LLM endpoint is redacted.** The issue footer names the
+    machine that wrote the summaries. Any URL pointing at a `*.local` host,
+    loopback or a bare IP becomes `[internal endpoint redacted]` in `docs/`.
+    The markdown in `issues/` is left untouched.
+  * **A rebuild changes no byte.** Nothing in the output comes from a clock; the
+    feed's dates come from the issue filenames. A day with no new issue produces
+    an empty `git status`.
+
+### Daily run (launchd)
+
+    cp deploy/ai.cyberwatch.daily.plist ~/Library/LaunchAgents/
+    launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.cyberwatch.daily.plist
+    launchctl kickstart -p gui/$(id -u)/ai.cyberwatch.daily     # run it now
+
+Same shape as `ai.hermes.update-sweep`: a user LaunchAgent at 07:10 local, logs
+under `~/.hermes/logs/cyberwatch-daily*.log`. It runs `deploy/cyberwatch-daily.sh`,
+which builds the issue, regenerates the site, and commits `issues/` and `docs/`
+only. Edit the absolute paths in the plist if the checkout is not at
+`/Users/YOURNAME/Projects/cyberwatch-news`; launchd does not expand variables.
+
+### Before making the repo public
+
+    python3 tools/public_repo_audit.py
+
+It scans every tracked file for credentials, internal hosts, absolute home
+paths and personal email addresses, and exits non-zero unless each finding is
+recorded in `deploy/audit-allowlist.txt` with a reason. Credentials cannot be
+recorded there at all. `deploy/audit-allowlist.txt` is the written record of
+what was judged safe to publish, including the decision about `localhost`
+appearing in the source but never on the site.
+
+
 ## Sources
 
 Both are public JSON, fetched live on every run. Neither is cached to disk.
@@ -113,19 +164,25 @@ The live tests hit the real CISA and NVD feeds, so the suite needs network.
 Two entries in the suite are mutation checks rather than tests: they break a
 control on a throwaway copy of the source and assert that the tests go red. A
 guard nobody has watched fail is not evidence, and the KEV-outage guard in
-particular exists to stop a run that otherwise looks perfectly healthy.
+particular exists to stop a run that otherwise looks perfectly healthy. The
+site generator gets the same treatment, because an escaping test passes
+trivially against a generator whose hostile input never reaches the page.
 
 
 ## Layout
 
     run.py                  the entrypoint: fetch, dedupe, rank, render, write
+    build_site.py           generate docs/ from issues/ (--check to verify only)
     Plans.md                scope, the two-tier rule, why this is not the matcher
     src/sources/kev.py      CISA KEV catalogue
     src/sources/nvd.py      NVD CVE API, published/lastMod windows, fetch by id
     src/dedupe.py           collapse repeated CVE ids to the newest revision
     src/news_rank.py        the two-tier selection
     src/render.py           the markdown issue, LLM fields with raw fallback
+    src/site.py             markdown -> HTML, the index, the feed, redaction
     data/software_reach.txt how widely deployed each named product is
+    deploy/                 the launchd plist, the daily script, the audit record
     tests/run.py            the whole suite
     tools/                  live probes and mutation checks, run by hand
     issues/                 the output, one dated markdown file per run
+    docs/                   the published site, generated -- never edited by hand
