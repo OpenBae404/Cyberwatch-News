@@ -3,19 +3,27 @@
 #
 #   1. build today's issue   (run.py, writes issues/YYYY-MM-DD.md)
 #   2. regenerate the site   (build_site.py, writes docs/)
-#   3. commit, and push ONLY if CYBERWATCH_PUBLISH=1 is set
+#   3. commit, then ASK A HUMAN and push only if they approve
 #
 # Deliberately not a python script: the interesting failure modes here are
 # process-level (a feed outage exiting 2, nothing to commit, no remote yet) and
 # that is what a shell reads naturally.
 #
-# PUSHING IS OFF BY DEFAULT, and a remote existing does not turn it on. This
-# repo is about to become public, and an unattended job that pushes whatever is
-# on master every morning publishes the first mistake nobody reviewed -- a
-# redaction that regressed, a file somebody left staged, an issue built from a
-# half-broken feed. Set CYBERWATCH_PUBLISH=1 in the plist's EnvironmentVariables
-# once the repo is public, the audit is clean, and that trade is wanted.
-# Until then the commit is local and a human pushes it after looking.
+# PUSHING REQUIRES A PERSON, every morning. The gate used to be
+# CYBERWATCH_PUBLISH=1 in the plist, which is a decision made once and then
+# never revisited: after the day it was set, every issue publishes unreviewed,
+# which is the thing the gate existed to prevent. So the gate is now a request
+# the operator answers per run:
+#
+#   approve-gate "<action>" --ttl N --requester X --detail Y
+#
+# It posts the request to Telegram, blocks until Approve or Deny is tapped, and
+# exits 0 approved, 1 denied or expired. It is NOT part of this repo -- it lives
+# in ~/.local/bin on the author's machine. When it is absent, which is the case
+# for anybody else who clones this, the run builds, rebuilds and commits exactly
+# as before and simply does not push; there is no configuration that turns
+# unattended publishing on, because the fallback for a missing approver is
+# "publish nothing", never "publish anyway".
 #
 # Install and check:
 #   cp deploy/ai.cyberwatch.daily.plist ~/Library/LaunchAgents/
@@ -29,8 +37,12 @@
 #   3 NVD failure                      4 nothing to ship
 #   5 the site generator refused (bad issue filename, or docs/ unwritable)
 #   6 the commit itself failed
-#   7 publishing was on and the push failed
-#   8 publishing was on and there is no remote to push to
+#   7 the operator approved and the push failed
+#   8 the approver is available but there is no remote to push to
+#
+# A denied or expired approval, and an absent approver, are both exit 0: the
+# issue is written and committed, which is the run succeeding. Only the push
+# did not happen, and `git push origin master` by hand finishes it.
 
 set -o pipefail
 
@@ -78,17 +90,54 @@ git -c user.name="OpenBae404" \
 }
 echo "[$(stamp)] committed $(git rev-parse --short HEAD)"
 
-# The gate. Not `if a remote exists` -- that would mean the act of adding a
-# remote silently turns an unattended publisher on, which is exactly the
-# surprise this repo cannot afford once it is public.
-if [ "${CYBERWATCH_PUBLISH:-0}" != "1" ]; then
-  echo "[$(stamp)] publishing is off (CYBERWATCH_PUBLISH is not 1) -- commit is local only"
+# The gate. Not an environment variable, and not `if a remote exists`: both are
+# decisions taken once, long before the issue they publish exists. This asks
+# about THIS issue, and asks the person whose name is on the site.
+#
+# Three ways not to push, all of them exit 0, because the run itself succeeded:
+# no approver installed, the operator denied, the request expired unanswered.
+#
+# The approver is looked up on PATH by name, with no environment variable to
+# redirect it. A CYBERWATCH_APPROVER=/bin/true would be the env gate this card
+# removed, wearing a different name.
+if ! command -v approve-gate >/dev/null 2>&1; then
+  echo "[$(stamp)] no approve-gate on PATH -- nothing was asked and nothing pushed; the commit is local"
   exit 0
 fi
 
 if ! git remote | grep -q .; then
-  echo "[$(stamp)] CYBERWATCH_PUBLISH=1 but no git remote is configured -- nothing pushed"
+  echo "[$(stamp)] no git remote is configured -- not asking for an approval that could not be acted on"
   exit 8
+fi
+
+# What the operator is shown. An approval request that says only "push?" trains
+# the reader to tap Approve, so the detail names the CVEs in the issue being
+# published and the page they will appear on.
+issue_files="$(git show --name-only --format= HEAD | grep '^issues/.*\.md$')"
+cves="$(printf '%s\n' "$issue_files" \
+  | while IFS= read -r f; do [ -n "$f" ] && git show "HEAD:$f"; done \
+  | grep -Eo 'CVE-[0-9]{4}-[0-9]{4,7}' | sort -u \
+  | paste -sd , - | sed 's/,/, /g')"
+# paste -sd takes a LIST of delimiters and cycles through them, so a two-char
+# ', ' would separate the first pair with a comma and the second with a space:
+# five CVEs would read as three. Join on one character, then widen it.
+[ -n "$cves" ] || cves="no CVE id found in the commit"
+today="$(date -u '+%Y-%m-%d')"
+detail="$(printf '%s\n%s\n%s\n%s' \
+  "commit $(git rev-parse --short HEAD) on $(git rev-parse --abbrev-ref HEAD)" \
+  "issue file(s): $(printf '%s' "$issue_files" | paste -sd ' ' -)" \
+  "CVEs: $cves" \
+  "goes live at https://cyberwatch.asutera.dev/")"
+
+echo "[$(stamp)] asking for approval to publish"
+if approve-gate "Publish CyberWatch issue $today" \
+     --ttl "${CYBERWATCH_APPROVAL_TTL:-21600}" \
+     --requester cyberwatch-daily \
+     --detail "$detail"; then
+  echo "[$(stamp)] approved"
+else
+  echo "[$(stamp)] not approved (denied or expired) -- the commit is local only, publish it by hand if that was wrong"
+  exit 0
 fi
 
 branch="$(git rev-parse --abbrev-ref HEAD)"

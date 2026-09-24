@@ -56,6 +56,13 @@ email address|tests/test_news_rank.py  # psirt@adobe.com, from an NVD fixture
 absolute home path|deploy/ai.cyberwatch.daily.plist  # launchd needs absolute paths
 internal host|deploy/ai.cyberwatch.daily.plist       # the LLM endpoint, as an env var
 
+# The daily runner's commit identity. `OpenBae404@users.noreply.github.com` is
+# GitHub's own no-reply form: it carries no mailbox, cannot receive mail, and is
+# already in the history of every commit this repo will publish -- it is the
+# address chosen precisely so a real one is not disclosed. Removing it would put
+# the daily commits back under a second, broken-looking author.
+email address|deploy/cyberwatch-daily.sh  # GitHub noreply commit identity, no mailbox behind it
+
 # This file, and the test that proves the audit can fail, quote the very strings
 # the audit looks for. They have to.
 internal host|deploy/audit-allowlist.txt   # quotes the accepted hosts

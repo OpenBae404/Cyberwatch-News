@@ -85,21 +85,52 @@ Nothing in this repo installs the agent -- the `cp` and `launchctl` lines above
 are the only way it gets scheduled, and a test asserts no tracked file executes
 them. Cloning or testing this repo never touches your machine's launchd.
 
-**The daily run does not push.** It builds, rebuilds and commits locally; the
-push happens only when `CYBERWATCH_PUBLISH=1` is in the plist's
-`EnvironmentVariables`, and adding a git remote does **not** turn it on by
-itself. An unattended morning push publishes the first mistake nobody reviewed,
-so the commit waits for a human until you decide otherwise. Exit codes of the
-runner: `2` KEV outage, `3` NVD failure, `4` nothing to ship, `5` the site
-generator refused, `6` the commit failed, `7` the push failed, `8` publishing
-was on with no remote configured. A quiet day -- a rebuild that changes no byte
--- exits `0` and commits nothing.
+**The daily run asks before it publishes.** It builds, rebuilds the site and
+commits locally, and then -- every morning, about that morning's issue -- sends
+an approval request to Telegram and blocks:
+
+    approve-gate "Publish CyberWatch issue 2026-09-24" --ttl 21600 \
+      --requester cyberwatch-daily --detail "<commit, issue file, CVE list, live URL>"
+
+Tap **Approve** and it pushes; the site updates minutes later. Tap **Deny**, or
+leave it for six hours until the request expires, and nothing is pushed. The
+request names the commit, the issue file, every CVE in it and the URL it would
+appear on, because an approval that only says "push?" trains you to tap Approve
+without reading.
+
+`approve-gate` is not part of this repo -- it lives in `~/.local/bin` on the
+author's machine, which is why the plist puts `~/.local/bin` on the run's PATH.
+**On any other checkout it is simply absent, and then the run never pushes:** it
+builds, rebuilds, commits, says `no approve-gate on PATH`, and exits `0`. There
+is no environment variable that supplies a substitute approver and none that
+turns publishing on -- the previous gate was `CYBERWATCH_PUBLISH=1` in the
+plist, and setting it once meant every later morning published unreviewed by
+nobody's decision. Setting it now does nothing at all, and a test asserts that.
+
+Manual publish -- the fallback for a denial, an expiry, a missing approver, or a
+failed push -- is one command, since the commit is already made:
+
+    git push origin master
+
+Exit codes of the runner: `2` KEV outage, `3` NVD failure, `4` nothing to ship,
+`5` the site generator refused, `6` the commit failed, `7` you approved and the
+push failed, `8` there is no remote configured (so nobody was asked). A denial,
+an expiry and a missing approver are all `0`: the issue was written and
+committed, which is the run succeeding. A quiet day -- a rebuild that changes no
+byte -- also exits `0`, commits nothing and asks nobody.
+`CYBERWATCH_APPROVAL_TTL` overrides the six-hour wait.
 
 `tests/test_daily_run.py` runs the real script against stub stages in a
-throwaway repo with a recording `git` and a real bare remote, so "no push was
-attempted" is a fact about the recorded `git` argv rather than an absent side
-effect; `tools/mutation_daily_check.py` breaks the runner eight ways and checks
-those tests go red each time.
+throwaway repo with a recording `git`, a stub `approve-gate` whose exit code the
+test chooses, and a real bare remote, so "no push was attempted" is a fact about
+the recorded `git` argv rather than an absent side effect, and "the operator was
+shown the CVEs" is a fact about the recorded `approve-gate` argv. PATH is built
+from scratch for each run so the suite can never reach the real approver and
+send you a notification. `tools/mutation_daily_check.py` breaks the runner
+eleven ways -- push whenever a remote exists, decide by environment variable
+instead of by a person, let the environment name a rubber-stamp approver,
+publish when the approver is missing, ask and ignore the answer, send a request
+that says nothing -- and checks those tests go red each time.
 
 ### Before making the repo public
 
@@ -134,7 +165,9 @@ above first -- it must print `CLEAR TO PUBLISH` -- then, in order:
    setting. Once the record resolves, tick **Enforce HTTPS** on the Pages
    settings page (the certificate can take a few minutes to issue).
 
-After that the daily launchd job commits and the site follows on the next push.
+After that the daily launchd job commits every morning and asks you, over
+Telegram, whether that morning's issue should go live; the site follows when you
+approve.
 
 
 ## Sources

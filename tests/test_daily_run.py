@@ -1,10 +1,10 @@
 """The daily run, executed. Not grepped.
 
 ``deploy/cyberwatch-daily.sh`` is the only thing in this repo that runs
-unattended and the only thing that can push. Its three guarantees are about
-what it does NOT do -- no commit when the feeds failed, no commit when nothing
-changed, no push unless a human turned publishing on -- and none of those can
-be established by reading the file. A test that asserts ``"git push" in text``
+unattended and the only thing that can push. Its guarantees are about what it
+does NOT do -- no commit when the feeds failed, no commit when nothing changed,
+no push unless a human approved this issue -- and none of those can be
+established by reading the file. A test that asserts ``"git push" in text``
 passes against a script that pushes from a line the reader did not think about.
 
 So this module runs the real script against stub stages in a throwaway repo:
@@ -18,6 +18,11 @@ So this module runs the real script against stub stages in a throwaway repo:
     unreachable remote also leaves no side effect.
   * ``origin`` is a real bare repository, so the shim's verdict is
     cross-checked: if no push was attempted, the bare repo has no refs.
+  * ``approve-gate`` is a stub that records the argv it was called with and
+    exits with a code the case chooses. PATH is rebuilt from scratch for every
+    run so the operator's REAL approve-gate can never be reached: a test that
+    posted a live Telegram approval request every time the suite ran would be
+    its own incident.
 
 The push case is exercised too. A gate that is never seen open is
 indistinguishable from a script that cannot push at all, and that test would
@@ -60,7 +65,16 @@ if mode == "same":
     # byte for byte. This is the ordinary quiet-day outcome, not an error.
     (issues / "2026-09-21.md").write_text("# issue one\\n", encoding="utf-8")
 else:
-    (issues / "2026-09-22.md").write_text("# issue two\\n", encoding="utf-8")
+    # Five CVE ids, one of them repeated: five is what a real issue ships every
+    # morning, and the approval request has to name all of them, each once. Two
+    # is not a usable fixture here -- it is the single count at which a cycling
+    # delimiter join happens to render correctly.
+    (issues / "2026-09-22.md").write_text(
+        "# issue two\\n\\n"
+        "CVE-2026-11111 and CVE-2026-22222, then CVE-2026-11111 again\\n"
+        "CVE-2026-33333, CVE-2026-44444 and CVE-2026-55555\\n",
+        encoding="utf-8",
+    )
 print("stub run.py: ok")
 '''
 
@@ -88,6 +102,20 @@ GIT_SHIM = '''#!/bin/bash
 # evidence; the forwarding keeps the script's behaviour real.
 printf '%s\\n' "$*" >> "$CYBERWATCH_GIT_LOG"
 exec {real_git} "$@"
+'''
+
+APPROVE_STUB = '''#!/bin/bash
+# Stand-in for ~/.local/bin/approve-gate. Records the whole argv and exits with
+# the code the test chose. Arguments are NUL-separated because --detail is
+# deliberately multi-line: a line-based log would split one argument into
+# several and the test would be reading a different argv than the script sent.
+# The real approve-gate asks a human over Telegram; that is exactly why no test
+# may reach it.
+{{
+  for a in "$@"; do printf '%s\\0' "$a"; done
+  printf '\\036'
+}} >> "$CYBERWATCH_APPROVE_LOG"
+exit {code}
 '''
 
 
@@ -140,12 +168,24 @@ class DailyRunCase(unittest.TestCase):
         shim.chmod(0o755)
         self.git_log = self.tmp / "git-invocations.log"
         self.git_log.write_text("", encoding="utf-8")
+        self.approve_log = self.tmp / "approve-invocations.log"
+        self.approve_log.write_text("", encoding="utf-8")
+
+    def install_approver(self, exit_code: int) -> None:
+        """Put a stub approve-gate on the run's PATH, exiting as told."""
+        stub = self.bin / "approve-gate"
+        stub.write_text(APPROVE_STUB.format(code=exit_code), encoding="utf-8")
+        stub.chmod(0o755)
 
     def run_daily(self, **env: str) -> subprocess.CompletedProcess[str]:
+        # PATH is built, not inherited. The operator's real approve-gate lives
+        # in ~/.local/bin, which is on the ambient PATH: inheriting it would
+        # mean every green test run posted a live approval request to a phone.
         environ = {
             **os.environ,
-            "PATH": f"{self.bin}:{os.environ.get('PATH', '')}",
+            "PATH": f"{self.bin}:/usr/bin:/bin:/usr/sbin:/sbin",
             "CYBERWATCH_GIT_LOG": str(self.git_log),
+            "CYBERWATCH_APPROVE_LOG": str(self.approve_log),
             "CYBERWATCH_PYTHON": sys.executable,
         }
         environ.pop("CYBERWATCH_PUBLISH", None)
@@ -162,6 +202,19 @@ class DailyRunCase(unittest.TestCase):
 
     def push_attempts(self) -> list[str]:
         return [c for c in self.git_calls() if " push" in f" {c}" or c.startswith("push")]
+
+    def approve_calls(self) -> list[list[str]]:
+        """Every approve-gate invocation, as argv lists."""
+        raw = self.approve_log.read_text(encoding="utf-8")
+        calls: list[list[str]] = []
+        for record in raw.split("\x1e"):
+            if not record:
+                continue
+            args = record.split("\x00")
+            if args and args[-1] == "":
+                args.pop()
+            calls.append(args)
+        return calls
 
     def head(self) -> str:
         return _git(self.repo, "rev-parse", "HEAD")
@@ -214,20 +267,27 @@ class TestAnUnchangedRunCommitsNothing(DailyRunCase):
         self.assertEqual(_git(self.repo, "status", "--porcelain"), "")
 
     def test_a_quiet_day_never_reaches_the_push(self) -> None:
-        self.run_daily(CYBERWATCH_STUB_MODE="same", CYBERWATCH_PUBLISH="1")
+        self.install_approver(0)
+        self.run_daily(CYBERWATCH_STUB_MODE="same")
         self.assertEqual(self.push_attempts(), [],
                          "nothing was committed, so there is nothing to publish")
+        self.assertEqual(self.approve_calls(), [],
+                         "no issue was produced, so nobody should have been asked")
 
 
-class TestPushingIsOffUnlessTurnedOn(DailyRunCase):
-    """Acceptance: pushing is off unless an environment variable is set.
+class TestPushingRequiresAnApproval(DailyRunCase):
+    """Acceptance: the push waits for a human decision about THIS issue.
 
     A remote is configured in every one of these cases. That is the point: the
-    previous version of this script pushed whenever a remote existed, so adding
-    the remote was itself the act that started publishing.
+    runner once pushed whenever a remote existed, so adding the remote was
+    itself the act that started publishing. The env gate that replaced it had
+    the same shape one level up -- set once, and every later morning publishes
+    unreviewed.
     """
 
-    def test_no_push_is_attempted_by_default(self) -> None:
+    def test_no_push_when_no_approver_is_installed(self) -> None:
+        # The state of every clone but the author's. It must not be a failure,
+        # and it must not be a push.
         proc = self.run_daily(CYBERWATCH_STUB_MODE="new")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
         self.assertNotEqual(self.head(), self.base, "the issue should still be committed")
@@ -236,31 +296,125 @@ class TestPushingIsOffUnlessTurnedOn(DailyRunCase):
             "git was never asked to push; recorded calls: " + "; ".join(self.git_calls()),
         )
         self.assertEqual(self.remote_refs(), "", "the remote received nothing")
-        self.assertIn("publishing is off", proc.stdout)
+        self.assertIn("no approve-gate on PATH", proc.stdout)
 
-    def test_a_value_other_than_one_does_not_publish(self) -> None:
-        for value in ("0", "", "true", "yes", "no"):
-            with self.subTest(value=value):
-                self.git_log.write_text("", encoding="utf-8")
-                self.run_daily(CYBERWATCH_STUB_MODE="new", CYBERWATCH_PUBLISH=value)
-                self.assertEqual(self.push_attempts(), [], f"CYBERWATCH_PUBLISH={value!r} pushed")
-                self.assertEqual(self.remote_refs(), "")
+    def test_a_denied_approval_does_not_push_and_still_exits_zero(self) -> None:
+        self.install_approver(1)
+        proc = self.run_daily(CYBERWATCH_STUB_MODE="new")
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(len(self.approve_calls()), 1, "the operator must have been asked once")
+        self.assertEqual(self.push_attempts(), [],
+                         "denied; recorded calls: " + "; ".join(self.git_calls()))
+        self.assertEqual(self.remote_refs(), "", "the remote received nothing")
+        self.assertIn("not approved", proc.stdout)
+        self.assertNotEqual(self.head(), self.base, "a denial must not undo the commit")
 
-    def test_the_gate_opens_when_it_is_set(self) -> None:
+    def test_an_approval_pushes(self) -> None:
         # Without this, deleting the push entirely would leave every test above
         # green. The gate has to be seen open at least once.
-        proc = self.run_daily(CYBERWATCH_STUB_MODE="new", CYBERWATCH_PUBLISH="1")
+        self.install_approver(0)
+        proc = self.run_daily(CYBERWATCH_STUB_MODE="new")
         self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
-        self.assertTrue(self.push_attempts(), "CYBERWATCH_PUBLISH=1 must push")
+        self.assertTrue(self.push_attempts(), "an approved run must push")
         self.assertIn("refs/heads/master", self.remote_refs())
+
+    def test_the_request_names_the_cves_and_the_url(self) -> None:
+        # An approval request that says only "push?" trains the operator to tap
+        # Approve without reading. What is in --detail is the whole point of
+        # asking, so it is asserted on the transmitted argv.
+        self.install_approver(0)
+        self.run_daily(CYBERWATCH_STUB_MODE="new")
+        calls = self.approve_calls()
+        self.assertEqual(len(calls), 1, f"expected one request, got {calls}")
+        argv = calls[0]
+
+        self.assertTrue(argv[0].startswith("Publish CyberWatch issue "),
+                        f"the action line reads {argv[0]!r}")
+        self.assertIn("--requester", argv)
+        self.assertEqual(argv[argv.index("--requester") + 1], "cyberwatch-daily")
+        self.assertIn("--ttl", argv)
+        self.assertTrue(int(argv[argv.index("--ttl") + 1]) > 0)
+
+        detail = argv[argv.index("--detail") + 1]
+        # The rendered line, not just membership. A join that separates some
+        # pairs with ", " and others with " " loses nothing but makes a
+        # five-item list read as three, which is the same "tap Approve without
+        # reading" failure this request exists to prevent.
+        cve_lines = [ln for ln in detail.splitlines() if ln.startswith("CVEs: ")]
+        self.assertEqual(len(cve_lines), 1, f"expected one CVEs line in:\n{detail}")
+        self.assertEqual(
+            cve_lines[0],
+            "CVEs: CVE-2026-11111, CVE-2026-22222, CVE-2026-33333, "
+            "CVE-2026-44444, CVE-2026-55555",
+            "the CVE list must be one comma-space separated list:\n" + detail,
+        )
+        self.assertEqual(detail.count("CVE-2026-11111"), 1,
+                         "a repeated CVE must be listed once:\n" + detail)
+        self.assertIn("https://cyberwatch.asutera.dev", detail, detail)
+        self.assertIn("issues/2026-09-22.md", detail, detail)
+        self.assertIn(_git(self.repo, "rev-parse", "--short", "HEAD"), detail, detail)
+
+    def test_the_approval_is_asked_after_the_commit_exists(self) -> None:
+        # The operator is shown a commit hash and a CVE list read out of that
+        # commit. Asking first would mean approving a description of an issue
+        # that had not been written yet.
+        self.install_approver(0)
+        self.run_daily(CYBERWATCH_STUB_MODE="new")
+        detail = self.approve_calls()[0][self.approve_calls()[0].index("--detail") + 1]
+        self.assertIn(_git(self.repo, "rev-parse", "--short", "HEAD"), detail)
+        self.assertNotIn(self.base[:7], detail, "the request described the previous commit")
+
+    def test_the_old_environment_gate_no_longer_publishes(self) -> None:
+        # The variable this card removed. If it still worked, the approval would
+        # be decoration: the plist could set it once and never ask again.
+        for value in ("1", "0", "true", "yes"):
+            with self.subTest(CYBERWATCH_PUBLISH=value):
+                self.setUp()
+                proc = self.run_daily(CYBERWATCH_STUB_MODE="new", CYBERWATCH_PUBLISH=value)
+                self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+                self.assertEqual(self.push_attempts(), [],
+                                 f"CYBERWATCH_PUBLISH={value!r} still pushes")
+                self.assertEqual(self.remote_refs(), "")
+
+    def test_no_environment_variable_can_supply_a_different_approver(self) -> None:
+        # The obvious way to make this script testable is to read the approver's
+        # name from the environment. That hands the plist a one-line rubber
+        # stamp -- CYBERWATCH_APPROVER=/usr/bin/true -- which is the env gate
+        # this card removed under a new name. So the name is hard-coded, and a
+        # run with no approve-gate on PATH must stay unpublished no matter what
+        # the environment points at.
+        stamp = self.bin / "rubber-stamp"
+        stamp.write_text("#!/bin/bash\nexit 0\n", encoding="utf-8")
+        stamp.chmod(0o755)
+        proc = self.run_daily(
+            CYBERWATCH_STUB_MODE="new",
+            CYBERWATCH_APPROVER=str(stamp),
+            CYBERWATCH_APPROVE_CMD=str(stamp),
+        )
+        self.assertEqual(proc.returncode, 0, proc.stdout + proc.stderr)
+        self.assertEqual(self.push_attempts(), [],
+                         "an environment variable named a substitute approver and it was used")
+        self.assertEqual(self.remote_refs(), "")
 
     def test_publishing_with_no_remote_fails_loudly(self) -> None:
         # Silence here would mean a job that reports success every morning
         # while the site never updates.
+        self.install_approver(0)
         _git(self.repo, "remote", "remove", "origin")
-        proc = self.run_daily(CYBERWATCH_STUB_MODE="new", CYBERWATCH_PUBLISH="1")
+        proc = self.run_daily(CYBERWATCH_STUB_MODE="new")
         self.assertEqual(proc.returncode, 8, proc.stdout + proc.stderr)
         self.assertIn("no git remote", proc.stdout)
+        self.assertEqual(self.approve_calls(), [],
+                         "asking to publish with nowhere to push wastes the operator's decision")
+
+    def test_a_push_failure_is_reported(self) -> None:
+        # Approved and then broken: the operator said yes, so a failure here is
+        # a real failure and must not be reported as a successful morning.
+        self.install_approver(0)
+        _git(self.repo, "remote", "set-url", "origin", str(self.tmp / "does-not-exist.git"))
+        proc = self.run_daily(CYBERWATCH_STUB_MODE="new")
+        self.assertEqual(proc.returncode, 7, proc.stdout + proc.stderr)
+        self.assertIn("push failed", proc.stdout)
 
     def test_only_issues_and_docs_are_committed(self) -> None:
         # A daily job that commits whatever is in the tree publishes a
@@ -287,17 +441,30 @@ class TestThePlistIsNotSelfInstalling(unittest.TestCase):
     def test_the_plist_is_where_the_card_says(self) -> None:
         self.assertTrue((ROOT / "deploy" / "ai.cyberwatch.daily.plist").is_file())
 
-    def test_the_shipped_plist_does_not_turn_publishing_on(self) -> None:
+    def test_the_shipped_plist_carries_no_publishing_switch(self) -> None:
         # The gate in the runner is worth nothing if the artifact that invokes
-        # it ships with the gate already open.
+        # it ships with the gate already open, and nothing if the plist can name
+        # its own approver.
         import plistlib
         with (ROOT / "deploy" / "ai.cyberwatch.daily.plist").open("rb") as handle:
             plist = plistlib.load(handle)
         env = plist.get("EnvironmentVariables", {})
-        self.assertNotIn(
-            "CYBERWATCH_PUBLISH", env,
-            "the installed agent would publish unattended from day one",
-        )
+        for key in ("CYBERWATCH_PUBLISH", "CYBERWATCH_APPROVER", "CYBERWATCH_APPROVE_CMD"):
+            self.assertNotIn(
+                key, env,
+                f"{key} in the installed agent would publish without asking anyone",
+            )
+
+    def test_the_plist_puts_the_approver_on_the_runs_path(self) -> None:
+        # The runner looks up approve-gate on PATH, and launchd gives a job a
+        # bare PATH: without ~/.local/bin the approval would silently never be
+        # requested, which looks exactly like a working, cautious job.
+        import plistlib
+        with (ROOT / "deploy" / "ai.cyberwatch.daily.plist").open("rb") as handle:
+            plist = plistlib.load(handle)
+        path = plist.get("EnvironmentVariables", {}).get("PATH", "")
+        self.assertIn(".local/bin", path,
+                      "approve-gate lives in ~/.local/bin and would not be found")
 
     def test_no_tracked_file_installs_it(self) -> None:
         # Only executable code can install anything. Prose that *documents* the
