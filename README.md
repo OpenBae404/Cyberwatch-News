@@ -117,9 +117,9 @@ appearing in the source but never on the site.
 The repo has **no git remote**; nothing has ever been pushed. Run the audit
 above first -- it must print `CLEAR TO PUBLISH` -- then, in order:
 
-1. Create the public repo `OpenBae404/cyberwatch-news` on GitHub and add it:
+1. Create the public repo `OpenBae404/Cyberwatch-News` on GitHub and add it:
 
-        git remote add origin https://github.com/OpenBae404/cyberwatch-news.git
+        git remote add origin https://github.com/OpenBae404/Cyberwatch-News.git
         git push -u origin master
 
 2. GitHub -> the repo -> **Settings -> Pages**. Source: *Deploy from a branch*,
