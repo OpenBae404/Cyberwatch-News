@@ -65,8 +65,13 @@ if git diff --cached --quiet; then
   exit 0
 fi
 
-git -c user.name="cyberwatch-daily" \
-    -c user.email="cyberwatch-daily@localhost" \
+# The same identity as every hand-made commit. A separate "cyberwatch-daily
+# <...@localhost>" author would publish a second, broken-looking address into
+# the history of a public repo -- exactly the metadata this repo's history was
+# rewritten to remove. That an issue is machine-written is already stated on
+# the page itself; the commit author does not need to repeat it.
+git -c user.name="OpenBae404" \
+    -c user.email="OpenBae404@users.noreply.github.com" \
     commit --quiet -m "Publish issue $(date -u '+%Y-%m-%d')" || {
   echo "[$(stamp)] commit failed"
   exit 6
