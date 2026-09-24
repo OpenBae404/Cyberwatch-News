@@ -10,9 +10,10 @@ silently refused.
 
 So each mutation below restores a plausible version of the script -- most of
 them versions this script has actually had -- and asserts the suite catches it.
-The mutation that matters most is #1: pushing when a remote exists. That is what
-the runner did before this card, it looks responsible, and every "no push was
-attempted" test in a suite without a configured remote stays green under it.
+The two that matter most are the two gates this file has already outlived:
+pushing whenever a remote exists, and pushing whenever CYBERWATCH_PUBLISH=1 is
+set in the plist. Both look responsible. Both mean the decision to publish was
+taken on some earlier day by someone who had not read the issue.
 
     python3 tools/mutation_daily_check.py
 
@@ -32,37 +33,80 @@ ROOT = Path(__file__).resolve().parents[1]
 RUNNER_REL = "deploy/cyberwatch-daily.sh"
 TEST = "tests.test_daily_run"
 
-PUSH_BLOCK = '''# The gate. Not `if a remote exists` -- that would mean the act of adding a
-# remote silently turns an unattended publisher on, which is exactly the
-# surprise this repo cannot afford once it is public.
-if [ "${CYBERWATCH_PUBLISH:-0}" != "1" ]; then
-  echo "[$(stamp)] publishing is off (CYBERWATCH_PUBLISH is not 1) -- commit is local only"
-  exit 0
-fi
-
-if ! git remote | grep -q .; then
-  echo "[$(stamp)] CYBERWATCH_PUBLISH=1 but no git remote is configured -- nothing pushed"
-  exit 8
-fi
-'''
+# Everything between the commit and the push: the approver lookup, the remote
+# check, the detail the operator reads, and the blocking request. The mutants
+# that replace the gate wholesale replace all of it, which is why the pattern is
+# anchored on the request's own denial branch rather than on the first `exit 0`.
+ASK_BLOCK = re.compile(
+    r"# The gate\. Not an environment variable.*?"
+    r"not approved \(denied or expired\).*?\n  exit 0\nfi\n",
+    re.S,
+)
 
 
 def mutate_push_when_remote_exists(text: str) -> str:
-    """The version this card replaced: a remote existing turns publishing on."""
-    return text.replace(PUSH_BLOCK, 'if ! git remote | grep -q .; then\n  exit 0\nfi\n')
+    """The version two cards ago: a remote existing turns publishing on."""
+    return ASK_BLOCK.sub('if ! git remote | grep -q .; then\n  exit 0\nfi\n', text, count=1)
 
 
-def mutate_publish_when_variable_merely_set(text: str) -> str:
-    """`-n` instead of `= 1`: CYBERWATCH_PUBLISH=0 publishes."""
-    return text.replace(
-        'if [ "${CYBERWATCH_PUBLISH:-0}" != "1" ]; then',
-        'if [ -z "${CYBERWATCH_PUBLISH+x}" ]; then',
+def mutate_env_gate_instead_of_asking(text: str) -> str:
+    """The gate this card replaced: set CYBERWATCH_PUBLISH=1 once, publish forever."""
+    return ASK_BLOCK.sub(
+        'if [ "${CYBERWATCH_PUBLISH:-0}" != "1" ]; then\n  exit 0\nfi\n'
+        'if ! git remote | grep -q .; then\n  exit 8\nfi\n',
+        text,
+        count=1,
     )
 
 
-def mutate_publish_by_default(text: str) -> str:
-    """The default flipped to on -- the one-character version of the bug."""
-    return text.replace('"${CYBERWATCH_PUBLISH:-0}"', '"${CYBERWATCH_PUBLISH:-1}"')
+def mutate_approver_overridable_by_env(text: str) -> str:
+    """The approver read from the environment: CYBERWATCH_APPROVER=/usr/bin/true."""
+    return text.replace(
+        'if ! command -v approve-gate >/dev/null 2>&1; then',
+        'APPROVER="${CYBERWATCH_APPROVER:-approve-gate}"\n'
+        'if ! command -v "$APPROVER" >/dev/null 2>&1; then',
+    ).replace('if approve-gate "Publish CyberWatch issue $today" \\',
+              'if "$APPROVER" "Publish CyberWatch issue $today" \\')
+
+
+def mutate_push_when_the_approver_is_missing(text: str) -> str:
+    """Fail-open: no approver installed means publish unasked."""
+    return ASK_BLOCK.sub(
+        'if ! git remote | grep -q .; then\n  exit 8\nfi\n'
+        'if command -v approve-gate >/dev/null 2>&1; then\n'
+        '  approve-gate "Publish CyberWatch issue $(date -u \'+%Y-%m-%d\')" \\\n'
+        '       --ttl 60 --requester cyberwatch-daily --detail "CVEs, and the live URL" || exit 0\n'
+        'fi\n',
+        text,
+        count=1,
+    )
+
+
+def mutate_ignore_the_denial(text: str) -> str:
+    """The approval is requested and its answer discarded: a decoration."""
+    return re.sub(
+        r'if approve-gate "Publish CyberWatch issue \$today" \\\n'
+        r'.*?\n'
+        r'  exit 0\nfi\n',
+        'approve-gate "Publish CyberWatch issue $today" \\\n'
+        '     --ttl "${CYBERWATCH_APPROVAL_TTL:-21600}" \\\n'
+        '     --requester cyberwatch-daily \\\n'
+        '     --detail "$detail" || true\n',
+        text,
+        count=1,
+        flags=re.S,
+    )
+
+
+def mutate_detail_says_nothing(text: str) -> str:
+    """The request drops the CVEs and the URL: "publish?" with nothing to read."""
+    return re.sub(
+        r'detail="\$\(printf .*?\)"\n',
+        'detail="the daily run would like to push"\n',
+        text,
+        count=1,
+        flags=re.S,
+    )
 
 
 def mutate_ignore_run_failure(text: str) -> str:
@@ -106,24 +150,28 @@ def mutate_stage_everything(text: str) -> str:
 
 
 def mutate_silent_missing_remote(text: str) -> str:
-    """Publishing on, no remote, exit 0: a job that reports success forever."""
+    """No remote, exit 0: a job that reports success forever."""
     return text.replace(
-        '  echo "[$(stamp)] CYBERWATCH_PUBLISH=1 but no git remote is configured -- nothing pushed"\n  exit 8\n',
+        '  echo "[$(stamp)] no git remote is configured -- not asking for an approval that could not be acted on"\n  exit 8\n',
         '  exit 0\n',
     )
 
 
 MUTATIONS = [
-    ("push whenever a remote exists (the behaviour this card replaced)",
+    ("push whenever a remote exists (the behaviour two cards ago)",
      mutate_push_when_remote_exists),
-    ("publish when CYBERWATCH_PUBLISH is merely set, whatever its value",
-     mutate_publish_when_variable_merely_set),
-    ("publishing defaults to on", mutate_publish_by_default),
+    ("an environment variable decides instead of a person (the gate this card replaced)",
+     mutate_env_gate_instead_of_asking),
+    ("the approver is redirectable by environment variable",
+     mutate_approver_overridable_by_env),
+    ("no approver installed, so publish anyway", mutate_push_when_the_approver_is_missing),
+    ("ask for approval and ignore the answer", mutate_ignore_the_denial),
+    ("the request says nothing about what is being published", mutate_detail_says_nothing),
     ("a feed outage no longer stops the run", mutate_ignore_run_failure),
     ("the site generator's failure is ignored", mutate_ignore_site_failure),
     ("commit even when nothing changed", mutate_commit_even_when_unchanged),
     ("stage the whole tree, not just issues/ and docs/", mutate_stage_everything),
-    ("publishing on with no remote exits 0 in silence", mutate_silent_missing_remote),
+    ("no remote exits 0 in silence", mutate_silent_missing_remote),
 ]
 
 

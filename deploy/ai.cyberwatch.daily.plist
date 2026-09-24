@@ -35,14 +35,16 @@
          move without a commit. -->
     <key>CYBERWATCH_LLM_BASE_URL</key>
     <string>http://localhost:8001/v1</string>
-    <!-- Pushing is OFF. The runner only pushes when CYBERWATCH_PUBLISH is
-         exactly "1", and a configured git remote does not turn it on by
-         itself. An unattended job that publishes every morning publishes the
-         first mistake nobody reviewed, so this stays absent until the repo is
-         public, the audit is clean, and that trade is wanted. At that point
-         add a CYBERWATCH_PUBLISH key here with the string value 1.
-         Without it the daily run still builds, rebuilds the site and commits;
-         only the push waits for a human. -->
+    <!-- There is no publishing switch here, and adding one does nothing: the
+         runner asks for approval per issue via approve-gate, which is found on
+         the PATH above (~/.local/bin) and cannot be redirected by an
+         environment variable. A key that turns unattended publishing on would
+         be the gate this plist used to carry: a decision taken once, then
+         applied to every later morning by nobody. If approve-gate is not
+         installed the daily run still builds, rebuilds the site and commits;
+         only the push waits, and `git push origin master` finishes it by hand.
+         CYBERWATCH_APPROVAL_TTL (seconds, default 21600 = 6h) is the only knob:
+         how long a request waits before it expires unpublished. -->
   </dict>
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
