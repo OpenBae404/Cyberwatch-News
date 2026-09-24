@@ -116,7 +116,11 @@ fi
 issue_files="$(git show --name-only --format= HEAD | grep '^issues/.*\.md$')"
 cves="$(printf '%s\n' "$issue_files" \
   | while IFS= read -r f; do [ -n "$f" ] && git show "HEAD:$f"; done \
-  | grep -Eo 'CVE-[0-9]{4}-[0-9]{4,7}' | sort -u | paste -sd ', ' -)"
+  | grep -Eo 'CVE-[0-9]{4}-[0-9]{4,7}' | sort -u \
+  | paste -sd , - | sed 's/,/, /g')"
+# paste -sd takes a LIST of delimiters and cycles through them, so a two-char
+# ', ' would separate the first pair with a comma and the second with a space:
+# five CVEs would read as three. Join on one character, then widen it.
 [ -n "$cves" ] || cves="no CVE id found in the commit"
 today="$(date -u '+%Y-%m-%d')"
 detail="$(printf '%s\n%s\n%s\n%s' \

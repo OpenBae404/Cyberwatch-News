@@ -157,6 +157,14 @@ def mutate_silent_missing_remote(text: str) -> str:
     )
 
 
+def mutate_cycling_cve_delimiter(text: str) -> str:
+    """`paste -sd ', '` cycles the two delimiters: five CVEs read as three."""
+    return text.replace(
+        "  | paste -sd , - | sed 's/,/, /g')\"",
+        "  | paste -sd ', ' -)\"",
+    )
+
+
 MUTATIONS = [
     ("push whenever a remote exists (the behaviour two cards ago)",
      mutate_push_when_remote_exists),
@@ -172,6 +180,7 @@ MUTATIONS = [
     ("commit even when nothing changed", mutate_commit_even_when_unchanged),
     ("stage the whole tree, not just issues/ and docs/", mutate_stage_everything),
     ("no remote exits 0 in silence", mutate_silent_missing_remote),
+    ("the CVE list is joined with a cycling delimiter", mutate_cycling_cve_delimiter),
 ]
 
 

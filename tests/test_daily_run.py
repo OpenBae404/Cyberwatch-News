@@ -65,10 +65,14 @@ if mode == "same":
     # byte for byte. This is the ordinary quiet-day outcome, not an error.
     (issues / "2026-09-21.md").write_text("# issue one\\n", encoding="utf-8")
 else:
-    # Two CVE ids, one of them repeated, because the approval request has to
-    # name what is being published and must not name it twice.
+    # Five CVE ids, one of them repeated: five is what a real issue ships every
+    # morning, and the approval request has to name all of them, each once. Two
+    # is not a usable fixture here -- it is the single count at which a cycling
+    # delimiter join happens to render correctly.
     (issues / "2026-09-22.md").write_text(
-        "# issue two\\n\\nCVE-2026-11111 and CVE-2026-22222, then CVE-2026-11111 again\\n",
+        "# issue two\\n\\n"
+        "CVE-2026-11111 and CVE-2026-22222, then CVE-2026-11111 again\\n"
+        "CVE-2026-33333, CVE-2026-44444 and CVE-2026-55555\\n",
         encoding="utf-8",
     )
 print("stub run.py: ok")
@@ -332,8 +336,18 @@ class TestPushingRequiresAnApproval(DailyRunCase):
         self.assertTrue(int(argv[argv.index("--ttl") + 1]) > 0)
 
         detail = argv[argv.index("--detail") + 1]
-        self.assertIn("CVE-2026-11111", detail, detail)
-        self.assertIn("CVE-2026-22222", detail, detail)
+        # The rendered line, not just membership. A join that separates some
+        # pairs with ", " and others with " " loses nothing but makes a
+        # five-item list read as three, which is the same "tap Approve without
+        # reading" failure this request exists to prevent.
+        cve_lines = [ln for ln in detail.splitlines() if ln.startswith("CVEs: ")]
+        self.assertEqual(len(cve_lines), 1, f"expected one CVEs line in:\n{detail}")
+        self.assertEqual(
+            cve_lines[0],
+            "CVEs: CVE-2026-11111, CVE-2026-22222, CVE-2026-33333, "
+            "CVE-2026-44444, CVE-2026-55555",
+            "the CVE list must be one comma-space separated list:\n" + detail,
+        )
         self.assertEqual(detail.count("CVE-2026-11111"), 1,
                          "a repeated CVE must be listed once:\n" + detail)
         self.assertIn("https://cyberwatch.asutera.dev", detail, detail)
