@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-09-26</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-09-26">CyberWatch Newsletter -- 2026-09-26</h2>
+<p>5 items out of 610 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-94127">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-94127">CVE-2026-94127</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.3</code> <code>published 2026-09-22</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in F5 BIG-IP APM on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in F5 BIG-IP allows unauthenticated remote code execution when the device is configured as an OAuth Authorization Server. The flaw exists in the data plane and does not expose the control plane.</p>
+<p><strong>Who is affected:</strong> Organizations running F5 BIG-IP with APM configured specifically as an OAuth Authorization Server are at risk. Deployments using APM only as an OAuth Client or Resource Server are not affected.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.3, enabling full remote code execution by an unauthenticated attacker. This applies to both software and appliance modes of the affected configuration.</p>
+<p><strong>What to do:</strong> Review your BIG-IP configuration to determine if it acts as an OAuth Authorization Server. If so, apply the relevant patch or mitigation as detailed in the vendor advisory and CISA catalog entry.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in F5 BIG-IP APM on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.3); reach 56/100 via &quot;big-ip&quot;.</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-5430">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-5430">CVE-2026-5430</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2026-08-06</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in WSO2 Multiple Products on 2026-09-24, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> The JWT authentication mechanism incorrectly accepts tokens signed with algorithms not explicitly configured, allowing attackers to bypass validation and gain unauthorized access. This flaw can lead to full account takeover and compromise of administrative accounts.</p>
+<p><strong>Who is affected:</strong> Users of WSO2 Universal Gateway, Traffic Manager, API Control Plane, API Manager, and Carbon API Manager Rest API Utility are at risk.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 10.0, enabling remote attackers to achieve complete system compromise without authentication.</p>
+<p><strong>What to do:</strong> Review the official WSO2 security advisory for details on mitigation and patching steps to secure your JWT implementation.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in WSO2 Multiple Products on 2026-09-24, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-93616">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-93616">CVE-2026-93616</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-22</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> An unauthenticated attacker can exploit a directory traversal and file upload flaw to upload and execute arbitrary scripts on the affected Check Point Management Server.</p>
+<p><strong>Who is affected:</strong> Users of Check Point Quantum Security Management, Check Point Multi-Domain Security Management, and Check Point Quantum Security Management are at risk.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating high potential for complete system compromise.</p>
+<p><strong>What to do:</strong> Administrators should consult the Check Point security advisory and CISA catalog entry for immediate mitigation steps and patch information.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2026-85102">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-85102">CVE-2026-85102</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-09</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in Check Point Quantum Security Gateway allows unauthenticated remote attackers to execute arbitrary code due to improper certificate trust validation during VPN negotiation.</p>
+<p><strong>Who is affected:</strong> Administrators using Check Point Quantum Security Gateway, Gaia Embedded, or Gaia OS are at risk of remote code execution.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.8, indicating a high likelihood of successful exploitation and severe impact on confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Review the official Check Point support article and security advisory for details on active exploitation and apply the necessary patches or mitigations immediately.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Check Point Multiple Products on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="5-known-exploited-cve-2026-93952">5. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-93952">CVE-2026-93952</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.5</code> <code>published 2026-09-22</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Arista VeloCloud Orchestrator on 2026-09-22, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A security flaw in VeloCloud Orchestrator on-prem allows remote attackers to access privileged internal functionality and impact the host. Successful exploitation can compromise the confidentiality, integrity, and availability of the orchestrator and its managed data.</p>
+<p><strong>Who is affected:</strong> Organizations running Arista Networks VeloCloud Orchestrator on-prem, including hosted and dedicated versions, are affected by this vulnerability.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.5, indicating severe potential impact on system security and data.</p>
+<p><strong>What to do:</strong> Administrators should apply the available patches to their VeloCloud Orchestrator instances immediately to mitigate the risk of exploitation.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Arista VeloCloud Orchestrator on 2026-09-22, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.5); reach unrated (no entry in the reach table).</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
