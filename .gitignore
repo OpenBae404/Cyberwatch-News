@@ -3,6 +3,12 @@ __pycache__/
 .venv/
 .scratch/
 
-# Hermes cuts per-card worktrees here. Never commit one: git add -A would
-# otherwise pull an entire nested checkout into this repo.
+# Per-card worktrees are cut here by the agent runner. Never commit one:
+# git add -A would otherwise pull an entire nested checkout into this repo.
 .worktrees/
+
+# The operator runbook names private infrastructure -- launchd labels of
+# unrelated systems, log paths, the approval tooling and the notification
+# channel. None of it helps a reader; all of it is reconnaissance in a public
+# repo whose front page is a security newsletter.
+deploy/RUNBOOK.md

@@ -21,7 +21,7 @@ So this module runs the real script against stub stages in a throwaway repo:
   * ``approve-gate`` is a stub that records the argv it was called with and
     exits with a code the case chooses. PATH is rebuilt from scratch for every
     run so the operator's REAL approve-gate can never be reached: a test that
-    posted a live Telegram approval request every time the suite ran would be
+    sent a live approval request to the operator every time the suite ran would be
     its own incident.
 
 The push case is exercised too. A gate that is never seen open is
@@ -109,7 +109,7 @@ APPROVE_STUB = '''#!/bin/bash
 # the code the test chose. Arguments are NUL-separated because --detail is
 # deliberately multi-line: a line-based log would split one argument into
 # several and the test would be reading a different argv than the script sent.
-# The real approve-gate asks a human over Telegram; that is exactly why no test
+# The real approve-gate notifies a human out of band; that is exactly why no test
 # may reach it.
 {{
   for a in "$@"; do printf '%s\\0' "$a"; done

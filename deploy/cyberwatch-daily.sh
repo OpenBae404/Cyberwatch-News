@@ -17,9 +17,9 @@
 #
 #   approve-gate "<action>" --ttl N --requester X --detail Y
 #
-# It posts the request to Telegram, blocks until Approve or Deny is tapped, and
+# It puts the request in front of the operator, blocks until they answer, and
 # exits 0 approved, 1 denied or expired. It is NOT part of this repo -- it lives
-# in ~/.local/bin on the author's machine. When it is absent, which is the case
+# an external command, not part of this repo. When it is absent, which is the case
 # for anybody else who clones this, the run builds, rebuilds and commits exactly
 # as before and simply does not push; there is no configuration that turns
 # unattended publishing on, because the fallback for a missing approver is

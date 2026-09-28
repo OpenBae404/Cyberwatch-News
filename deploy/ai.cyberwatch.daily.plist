@@ -1,8 +1,8 @@
 <?xml version="1.0" encoding="UTF-8"?>
 <!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
 <!--
-  The daily CyberWatch run. Same shape as ai.hermes.update-sweep: a user
-  LaunchAgent, one StartCalendarInterval, logs under ~/.hermes/logs.
+  The daily CyberWatch run: a user LaunchAgent, one StartCalendarInterval,
+  logs under ~/Library/Logs/cyberwatch.
 
     cp deploy/ai.cyberwatch.daily.plist ~/Library/LaunchAgents/
     launchctl bootstrap gui/$(id -u) ~/Library/LaunchAgents/ai.cyberwatch.daily.plist
@@ -49,8 +49,8 @@
   <key>StartCalendarInterval</key>
   <dict><key>Hour</key><integer>7</integer><key>Minute</key><integer>10</integer></dict>
   <key>RunAtLoad</key><false/>
-  <key>StandardOutPath</key><string>/Users/YOURNAME/.hermes/logs/cyberwatch-daily.log</string>
-  <key>StandardErrorPath</key><string>/Users/YOURNAME/.hermes/logs/cyberwatch-daily.err.log</string>
+  <key>StandardOutPath</key><string>/Users/YOURNAME/Library/Logs/cyberwatch/cyberwatch-daily.log</string>
+  <key>StandardErrorPath</key><string>/Users/YOURNAME/Library/Logs/cyberwatch/cyberwatch-daily.err.log</string>
   <key>WorkingDirectory</key><string>/Users/YOURNAME/Projects/cyberwatch-news</string>
 </dict>
 </plist>
