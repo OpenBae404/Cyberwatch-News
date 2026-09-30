@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-09-30</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-09-30">CyberWatch Newsletter -- 2026-09-30</h2>
+<p>5 items out of 600 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 1 known-exploited (in the CISA KEV catalogue, attacks are happening now) and 4 severity-chosen (not known-exploited). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-86950">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-86950">CVE-2026-86950</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.8</code> <code>published 2026-09-28</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Apple Multiple Products on 2026-09-29, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> An out-of-bounds write vulnerability in Apple software allowed arbitrary code execution when processing maliciously crafted files. Apple has addressed the issue with improved bounds checking and confirmed exploitation in sophisticated targeted attacks.</p>
+<p><strong>Who is affected:</strong> Users of iOS, iPadOS, macOS Sequoia, and macOS Tahoe running versions prior to the specified updates are at risk.</p>
+<p><strong>How serious:</strong> The vulnerability is rated HIGH severity with a CVSS score of 8.8, indicating significant potential for system compromise.</p>
+<p><strong>What to do:</strong> Update iOS, iPadOS, macOS Sequoia, and macOS Tahoe to the latest available versions to apply the fix.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Apple Multiple Products on 2026-09-29, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.8); reach 95/100 via &quot;ipados&quot;.</p>
+</article>
+<article>
+<h3 id="2-cve-2026-100819">2. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-100819">CVE-2026-100819</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.6</code> <code>published 2026-09-29</code></p>
+<p><strong>What happened:</strong> A sandbox escape vulnerability exists in the XPCOM component due to incorrect boundary conditions. This flaw allows attackers to break out of the browser&#x27;s security sandbox.</p>
+<p><strong>Who is affected:</strong> Users of Mozilla Firefox are affected. Specifically, versions prior to Firefox ESR 153.4, Firefox 157, Firefox ESR 115.42, and Firefox ESR 140.17 are vulnerable.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.6. It poses a high risk because it can lead to complete system compromise.</p>
+<p><strong>What to do:</strong> Update Firefox to the fixed versions listed in the advisory. Users should apply the patch as soon as possible to mitigate the risk.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.6); reach 90/100 via &quot;firefox&quot;.</p>
+</article>
+<article>
+<h3 id="3-cve-2026-84154">3. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-84154">CVE-2026-84154</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.9</code> <code>published 2026-09-29</code></p>
+<p><strong>What happened:</strong> A code injection vulnerability in GEOVIA Geospatial Data Manager allows attackers to execute arbitrary code on the server.</p>
+<p><strong>Who is affected:</strong> Users running GEOVIA Geospatial Data Manager from Release 3DEXPERIENCE R2024x through Release 3DEXPERIENCE R2026x are affected.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.9, indicating a high risk of complete system compromise.</p>
+<p><strong>What to do:</strong> Review the official security advisory from Dassault Systèmes for details on mitigation and patching.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.9); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="4-cve-2026-87799">4. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-87799">CVE-2026-87799</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.9</code> <code>published 2026-09-28</code></p>
+<p><strong>What happened:</strong> An improper link resolution vulnerability in Canonical LXD allows authenticated users or malicious migration sources to write files as root on the host system. This is achieved by crafting rsync or btrfs send streams that plant symlinks to arbitrary paths during volume transfers.</p>
+<p><strong>Who is affected:</strong> Users running Canonical LXD versions 4.0 and later are affected until they upgrade to versions 4.0.14, 5.0.10, 5.21.8, or 6.10.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.9, enabling full host compromise and arbitrary file writes as root.</p>
+<p><strong>What to do:</strong> Upgrade Canonical LXD to version 4.0.14, 5.0.10, 5.21.8, or 6.10 to resolve the issue.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.9); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="5-cve-2026-82377">5. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-82377">CVE-2026-82377</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.9</code> <code>published 2026-09-28</code></p>
+<p><strong>What happened:</strong> A missing authorization check in Apache Roller 6.1.5 allows authenticated users to read, modify, or delete content in other weblogs via legacy XML-RPC APIs. The vulnerability exists because the handlers verify the caller&#x27;s identity but fail to verify their permission on the specific weblog or entry being accessed.</p>
+<p><strong>Who is affected:</strong> Administrators running Apache Roller 6.1.5 who have enabled the non-default global XML-RPC setting are affected. Users of other versions or those who have not enabled this specific feature are not impacted.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.9, indicating severe risks to confidentiality, integrity, and availability. Attackers can fully compromise data across different weblogs due to the lack of proper access controls.</p>
+<p><strong>What to do:</strong> Upgrade to Apache Roller 6.1.6 or later, which implements explicit per-method permission checks. Alternatively, keep the XML-RPC feature disabled if upgrading is not immediately possible.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.9); reach unrated (no entry in the reach table).</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
