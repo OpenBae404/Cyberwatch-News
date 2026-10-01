@@ -1,0 +1,75 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-01</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-01">CyberWatch Newsletter -- 2026-10-01</h2>
+<p><strong>SUMMARY FAILED: 1 of 5 item below are NOT summaries.</strong> The model was reachable but returned nothing usable (answer had no usable &#x27;how_serious&#x27;), so those item show unedited NVD text -- vendor changelogs, commit messages and CPE strings. Read them as raw data, and treat this issue as a failed run.</p>
+<p>5 items out of 609 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-88772">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-88772">CVE-2026-88772</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.5</code> <code>published 2026-09-27</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Citrix NetScaler on 2026-09-27, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in Citrix NetScaler ADC and NetScaler Gateway allows attackers to achieve remote code execution or cause a denial of service.</p>
+<p><strong>Who is affected:</strong> Administrators using Citrix NetScaler ADC versions before 14.1-73.37, 13.1-64.23, 14.1-73.37 FIPS, or 13.1.37.279 FIPS and NDcPP, as well as NetScaler Gateway versions before 14.1-73.37 or 13.1-64.23.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.5, indicating severe impact on confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Update affected NetScaler ADC and Gateway installations to the patched versions specified by Citrix to mitigate the risk.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Citrix NetScaler on 2026-09-27, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.5); reach 63/100 via &quot;netscaler&quot;.</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-5430">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-5430">CVE-2026-5430</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2026-08-06</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in WSO2 Multiple Products on 2026-09-24, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> The JWT authentication mechanism incorrectly accepts tokens signed with algorithms that are not explicitly configured or supported, allowing attackers to bypass validation. This flaw enables unauthorized access, including potential administrative account compromise and full account takeover.</p>
+<p><strong>Who is affected:</strong> Users of WSO2 Universal Gateway, WSO2 Traffic Manager, WSO2 API Control Plane, WSO2 API Manager, and WSO2 Carbon API Manager Rest API Utility are affected.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 10.0, indicating that successful exploitation can lead to complete system compromise across all confidentiality, integrity, and availability aspects.</p>
+<p><strong>What to do:</strong> Review the official WSO2 security advisory for details on mitigation and patching steps. Apply the necessary updates or configuration changes to restrict JWT algorithm validation to only those explicitly supported.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in WSO2 Multiple Products on 2026-09-24, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-76504">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76504">CVE-2026-76504</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-30</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Cisco Catalyst SD-WAN Manager on 2026-09-30, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in Cisco Catalyst SD-WAN Manager allows unauthenticated remote attackers to bypass API authentication and gain admin access. This occurs because improper handling of URI encoding in HTTP requests circumvents intended access restrictions.</p>
+<p><strong>Who is affected:</strong> Organizations running Cisco Catalyst SD-WAN Manager are at risk of unauthorized administrative access to their management interfaces.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.8, enabling full administrative control over the affected system by any remote attacker.</p>
+<p><strong>What to do:</strong> Administrators should consult the official Cisco Security Advisory and apply the necessary patches or configuration changes to mitigate this authentication bypass.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Cisco Catalyst SD-WAN Manager on 2026-09-30, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2026-71362">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-71362">CVE-2026-71362</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.1</code> <code>published 2026-08-11</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Adobe Commerce and Magento on 2026-09-24, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> Adobe Commerce and Magento Open Source contain an incorrect authorization vulnerability that allows attackers to escalate privileges without user interaction. This flaw enables unauthorized access to sensitive resources by bypassing expected access controls.</p>
+<p><strong>Who is affected:</strong> Users running Adobe Commerce, Adobe Commerce B2B, or Magento Open Source are impacted by this critical security flaw.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.1, indicating a high risk of privilege escalation and data compromise.</p>
+<p><strong>What to do:</strong> Administrators should consult the Adobe Product Security Incident Response Team advisory for details on affected versions and available patches. Immediate action is recommended to mitigate the risk of unauthorized elevated access.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Adobe Commerce and Magento on 2026-09-24, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.1); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="5-summary-failed-known-exploited-cve-2026-86950">5. SUMMARY FAILED -- KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-86950">CVE-2026-86950</a></h3>
+<p class="tags"><code>SUMMARY FAILED</code> <code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.8</code> <code>published 2026-09-28</code></p>
+<blockquote><p><strong>SUMMARY FAILED.</strong> The model was asked for this item and returned nothing usable (answer had no usable &#x27;how_serious&#x27;). The four fields below are unedited NVD data -- raw vendor text, commit messages and CPE strings -- not a summary written for a reader.</p></blockquote>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Apple Multiple Products on 2026-09-29, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> An out-of-bounds write issue was addressed with improved bounds checking. This issue is fixed in iOS 26.7.1 and iPadOS 26.7.1, macOS Sequoia 15.8.1, macOS Tahoe 26.7.1. Processing a maliciously crafted file may lead to arbitrary code execution. Apple is aware of a report that this issue may have been exploited in an extremely sophisticated attack against specific targeted individuals on versions of iOS before iOS 27.</p>
+<p><strong>Who is affected:</strong> Affected products per NVD: Apple iOS and iPadOS, Apple macOS, apple ipados, apple iphone os, apple macos.</p>
+<p><strong>How serious:</strong> HIGH (CVSS 8.8, v3.1). High -- patch on the next maintenance window. Vector: CVSS:3.1/AV:N/AC:L/PR:N/UI:R/S:U/C:H/I:H/A:H.</p>
+<p><strong>What to do:</strong> Check whether the listed versions run here, then apply the vendor fix for CVE-2026-86950. Details: https://nvd.nist.gov/vuln/detail/CVE-2026-86950 References: https://support.apple.com/en-us/149226, https://support.apple.com/en-us/149228, https://support.apple.com/en-us/149229</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Apple Multiple Products on 2026-09-29, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.8); reach 95/100 via &quot;ipados&quot;.</p>
+</article>
+<p>_Summaries: SUMMARY FAILED -- 1 of 5 item(s) fell back to raw NVD text because the model returned nothing usable (answer had no usable &#x27;how_serious&#x27;)._ <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>

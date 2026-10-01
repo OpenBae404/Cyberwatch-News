@@ -5,7 +5,14 @@
     <link>https://cyberwatch.asutera.dev/</link>
     <description>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</description>
     <language>en</language>
-    <lastBuildDate>Wed, 30 Sep 2026 07:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Thu, 01 Oct 2026 07:00:00 +0000</lastBuildDate>
+    <item>
+      <title>CyberWatch Newsletter -- 2026-10-01</title>
+      <link>https://cyberwatch.asutera.dev/issues/2026-10-01.html</link>
+      <guid isPermaLink="true">https://cyberwatch.asutera.dev/issues/2026-10-01.html</guid>
+      <pubDate>Thu, 01 Oct 2026 07:00:00 +0000</pubDate>
+      <description>SUMMARY FAILED: 1 of 5 item below are NOT summaries. The model was reachable but returned nothing usable (answer had no usable 'howserious'), so those item show unedited NVD text -- vendor changelogs, commit messages and CPE strings. Read them as raw data, and treat this issue as a failed run. Items: CVE-2026-88772, CVE-2026-5430, CVE-2026-76504, CVE-2026-71362, CVE-2026-86950.</description>
+    </item>
     <item>
       <title>CyberWatch Newsletter -- 2026-09-30</title>
       <link>https://cyberwatch.asutera.dev/issues/2026-09-30.html</link>
