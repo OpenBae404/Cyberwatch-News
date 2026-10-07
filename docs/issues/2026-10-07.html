@@ -1,0 +1,72 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-07</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-07">CyberWatch Newsletter -- 2026-10-07</h2>
+<p>5 items out of 605 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 4 known-exploited (in the CISA KEV catalogue, attacks are happening now) and 1 severity-chosen (not known-exploited). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-104286">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-104286">CVE-2026-104286</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-10-01</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Fortinet FortiMail on 2026-10-01, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A path traversal vulnerability in Fortinet FortiMail allows unauthenticated attackers to write arbitrary files on the underlying system through crafted HTTP or HTTPS requests.</p>
+<p><strong>Who is affected:</strong> Users running FortiMail versions 8.0.0 through 8.0.1, 7.6.0 through 7.6.6, 7.4.0 through 7.4.8, and 7.2.0 through 7.2.9.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating high potential for complete system compromise.</p>
+<p><strong>What to do:</strong> Check if your environment uses affected FortiMail versions and apply the necessary updates or patches as recommended by Fortinet.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Fortinet FortiMail on 2026-10-01, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-76504">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-76504">CVE-2026-76504</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-09-30</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Cisco Catalyst SD-WAN Manager on 2026-09-30, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A critical vulnerability in Cisco Catalyst SD-WAN Manager allows unauthenticated remote attackers to bypass API authentication and gain admin access. This occurs because improper handling of URI encoding in HTTP requests circumvents specific endpoint access restrictions.</p>
+<p><strong>Who is affected:</strong> Organizations running the Cisco Catalyst SD-WAN Manager are at risk of unauthorized administrative access to their SD-WAN infrastructure.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.8, enabling full compromise of the management system without authentication.</p>
+<p><strong>What to do:</strong> Administrators should review the official Cisco Security Advisory and apply the necessary patches or configuration changes to mitigate the URI encoding bypass.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Cisco Catalyst SD-WAN Manager on 2026-09-30, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-102490">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-102490">CVE-2026-102490</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.4</code> <code>published 2026-09-30</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A privilege escalation vulnerability in Zammad allows the local zammad user to gain root access. This flaw exists in all versions of Zammad, including the latest alpha releases.</p>
+<p><strong>Who is affected:</strong> All users running Zammad are affected by this critical vulnerability.</p>
+<p><strong>How serious:</strong> The issue is rated as critical with a CVSS score of 9.4, indicating a high risk of complete system compromise.</p>
+<p><strong>What to do:</strong> Administrators should review the official advisories from DIVD and CISA for mitigation steps. Immediate attention is required due to the active exploitation status listed in the CISA catalog.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.4); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2026-88779">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-88779">CVE-2026-88779</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.7</code> <code>published 2026-10-04</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in NetScaler ADC and NetScaler Gateway allows an attacker to cause a high impact on availability without affecting confidentiality or integrity. The issue is actively being exploited in the wild as indicated by its inclusion in the CISA Known Exploited Vulnerabilities catalog.</p>
+<p><strong>Who is affected:</strong> Organizations running NetScaler ADC versions before 14.1-73.41, 13.1-64.28, 14.1-73.41 FIPS, or 13.1-37.282, as well as NetScaler Gateway versions before 14.1-73.41 or 13.1-64.28.</p>
+<p><strong>How serious:</strong> The vulnerability is rated HIGH severity with a CVSS score of 8.7, indicating significant risk to system availability for affected deployments.</p>
+<p><strong>What to do:</strong> Update NetScaler ADC and NetScaler Gateway to the patched versions listed in the Citrix support article CTX697174 to mitigate the risk of exploitation.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.7); reach 63/100 via &quot;netscaler&quot;.</p>
+</article>
+<article>
+<h3 id="5-cve-2026-21589">5. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-21589">CVE-2026-21589</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.3</code> <code>published 2026-10-05</code></p>
+<p><strong>What happened:</strong> An arbitrary file access vulnerability in Atlassian Data Center products allows unauthenticated attackers to read specific files within the web application root directory if they know the exact file path. This flaw does not permit directory enumeration, limiting exploitation to targets with known sensitive file locations.</p>
+<p><strong>Who is affected:</strong> Users running Atlassian Bitbucket, Confluence, Jira Software, Jira Service Management, Bamboo, Crowd, Crucible, or Fisheye Data Center versions prior to the specified fix releases.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.3, as it enables high confidentiality and integrity impacts for sensitive files in certain configurations.</p>
+<p><strong>What to do:</strong> Upgrade affected products to the fixed versions listed in the vendor advisory, such as Bitbucket 9.4.26 or Jira Software 9.12.40, to resolve the issue.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.3); reach 51/100 via &quot;confluence&quot;.</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
