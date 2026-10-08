@@ -1,0 +1,71 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-08</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-08">CyberWatch Newsletter -- 2026-10-08</h2>
+<p>5 items out of 604 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 3 known-exploited (in the CISA KEV catalogue, attacks are happening now) and 2 severity-chosen (not known-exploited). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-104286">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-104286">CVE-2026-104286</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-10-01</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Fortinet FortiMail on 2026-10-01, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A path traversal vulnerability in Fortinet FortiMail allows unauthenticated attackers to write arbitrary files on the underlying system via crafted HTTP or HTTPS requests.</p>
+<p><strong>Who is affected:</strong> Users running FortiMail versions 8.0.0 through 8.0.1, 7.6.0 through 7.6.6, 7.4.0 through 7.4.8, and 7.2.0 through 7.2.9 are affected.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating high potential for complete system compromise.</p>
+<p><strong>What to do:</strong> Administrators should consult the Fortinet PSIRT advisory and apply available patches to mitigate the risk of unauthorized file writes.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Fortinet FortiMail on 2026-10-01, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2026-102490">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-102490">CVE-2026-102490</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.4</code> <code>published 2026-09-30</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in Zammad allows the local zammad user to escalate privileges to root. This issue affects all versions of Zammad, including the latest alpha releases.</p>
+<p><strong>Who is affected:</strong> Organizations running Zammad are at risk, particularly those with local access to the zammad user account.</p>
+<p><strong>How serious:</strong> The vulnerability is rated as critical with a CVSS score of 9.4, indicating a high potential for complete system compromise.</p>
+<p><strong>What to do:</strong> Administrators should review the official Zammad advisory and apply any available mitigations or updates immediately. Monitoring for signs of active exploitation is recommended given current threat intelligence.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.4); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-88779">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-88779">CVE-2026-88779</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.7</code> <code>published 2026-10-04</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in NetScaler ADC and NetScaler Gateway allows an attacker to cause a denial of service by exploiting the application.</p>
+<p><strong>Who is affected:</strong> Organizations running NetScaler ADC versions before 14.1-73.41, 13.1-64.28, 14.1-73.41 FIPS, or 13.1-37.282, and NetScaler Gateway versions before 14.1-73.41 or 13.1-64.28.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 8.7, indicating significant impact on availability.</p>
+<p><strong>What to do:</strong> Update affected NetScaler ADC and NetScaler Gateway installations to the specified patched versions as soon as possible.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.7); reach 63/100 via &quot;netscaler&quot;.</p>
+</article>
+<article>
+<h3 id="4-cve-2026-106241">4. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-106241">CVE-2026-106241</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.6</code> <code>published 2026-10-06</code></p>
+<p><strong>What happened:</strong> An incorrect authorization flaw in Google Chrome on Android allowed a remote attacker to potentially execute arbitrary code outside the sandbox via a crafted HTML page. This vulnerability requires social engineering to trigger and is rated as medium severity in Chromium but critical in CVSS.</p>
+<p><strong>Who is affected:</strong> Users running Google Chrome on Android prior to version 155.0.8059.39 are affected by this issue.</p>
+<p><strong>How serious:</strong> The vulnerability has a CVSS score of 9.6, indicating a critical impact on confidentiality, integrity, and availability, though the Chromium team classifies it as medium severity.</p>
+<p><strong>What to do:</strong> Update Google Chrome on Android to version 155.0.8059.39 or later to resolve the authorization flaw and prevent potential code execution.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.6); reach 98/100 via &quot;chrome&quot;.</p>
+</article>
+<article>
+<h3 id="5-cve-2026-106016">5. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-106016">CVE-2026-106016</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-10-06</code></p>
+<p><strong>What happened:</strong> A mitigation bypass in the File Handling component of Firefox was identified and addressed. The vulnerability allows attackers to circumvent security controls designed to protect user data.</p>
+<p><strong>Who is affected:</strong> Users running Mozilla Firefox prior to version 157.0.1 are affected by this issue. Systems relying on this browser version for secure file handling are at risk.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating severe impact on confidentiality, integrity, and availability. Exploitation could lead to significant data compromise without user interaction.</p>
+<p><strong>What to do:</strong> Update Mozilla Firefox to version 157.0.1 or later to resolve the vulnerability. Verify the installed version through the browser&#x27;s about dialog or update settings.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.8); reach 90/100 via &quot;firefox&quot;.</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
