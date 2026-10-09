@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-09</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-09">CyberWatch Newsletter -- 2026-10-09</h2>
+<p>5 items out of 608 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2015-3306">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2015-3306">CVE-2015-3306</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2015-05-18</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in ProFTPD on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in the mod_copy module of ProFTPD 1.3.5 allows remote attackers to read and write arbitrary files using the site cpfr and site cpto commands.</p>
+<p><strong>Who is affected:</strong> Users running ProFTPD version 1.3.5 with the mod_copy module enabled are affected.</p>
+<p><strong>How serious:</strong> The issue is rated as critical with a CVSS score of 10.0, indicating full compromise of confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Administrators should update ProFTPD to a patched version as soon as possible to prevent unauthorized file access and modification.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in ProFTPD on 2026-10-08, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2021-3199">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2021-3199">CVE-2021-3199</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2021-01-26</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in ONLYOFFICE Docs on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A directory traversal vulnerability in ONLYOFFICE Document Server before version 5.6.3 allows remote attackers to execute arbitrary code via a crafted image upload parameter containing a /.. sequence.</p>
+<p><strong>Who is affected:</strong> Organizations running ONLYOFFICE Document Server versions prior to 5.6.3 that utilize JSON Web Tokens for authentication.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating a high likelihood of successful remote code execution.</p>
+<p><strong>What to do:</strong> Upgrade ONLYOFFICE Document Server to version 5.6.3 or later to resolve the vulnerability.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in ONLYOFFICE Docs on 2026-10-08, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-102490">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-102490">CVE-2026-102490</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.4</code> <code>published 2026-09-30</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> Zammad packages built with packager.io contained a privilege escalation flaw where service processes briefly ran as root and executed files writable by the unprivileged zammad account. An attacker with local write access to the zammad service account could automatically escalate to full root privileges without administrator interaction.</p>
+<p><strong>Who is affected:</strong> Administrators running Zammad installations from DEB or RPM packages are affected, while source installations and official container images are not.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.4, allowing complete system compromise due to automatic service restarts facilitating rapid privilege escalation.</p>
+<p><strong>What to do:</strong> Update all DEB and RPM packaged installations of Zammad to the latest patched version to resolve the privilege escalation risk.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Zammad GmbH Zammad on 2026-10-02, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.4); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2015-5477">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2015-5477">CVE-2015-5477</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 7.5</code> <code>published 2015-07-29</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in ISC BIND on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in ISC BIND versions before 9.9.7-P2 and 9.10.2-P3 allows remote attackers to trigger a REQUIRE assertion failure. This causes the named daemon to exit, resulting in a denial of service.</p>
+<p><strong>Who is affected:</strong> Administrators running ISC BIND 9.x prior to 9.9.7-P2 or 9.10.x prior to 9.10.2-P3 are affected.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 7.5 due to its potential to disrupt DNS services.</p>
+<p><strong>What to do:</strong> Update ISC BIND to version 9.9.7-P2 or later, or 9.10.2-P3 or later, to resolve the denial of service risk.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in ISC BIND on 2026-10-08, so it is being used against people now -- that outranks severity. HIGH (CVSS 7.5); reach 70/100 via &quot;bind&quot;.</p>
+</article>
+<article>
+<h3 id="5-known-exploited-cve-2026-88779">5. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-88779">CVE-2026-88779</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.7</code> <code>published 2026-10-04</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in NetScaler ADC and NetScaler Gateway allows an attacker to cause a denial of service by exploiting a high availability of impact with no required privileges or user interaction.</p>
+<p><strong>Who is affected:</strong> Organizations running NetScaler ADC versions before 14.1-73.41, 13.1-64.28, 14.1-73.41 FIPS, or 13.1-37.282, and NetScaler Gateway versions before 14.1-73.41 or 13.1-64.28.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 8.7, indicating significant potential for service disruption.</p>
+<p><strong>What to do:</strong> Update affected NetScaler ADC and Gateway installations to the specified patched versions as soon as possible.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.7); reach 63/100 via &quot;netscaler&quot;.</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
