@@ -1,0 +1,73 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-11</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-11">CyberWatch Newsletter -- 2026-10-11</h2>
+<p>5 items out of 606 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 5 known-exploited (in the CISA KEV catalogue, attacks are happening now). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2015-3306">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2015-3306">CVE-2015-3306</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2015-05-18</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in ProFTPD on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> The mod_copy module in ProFTPD 1.3.5 allows remote attackers to read and write arbitrary files using the site cpfr and site cpto commands.</p>
+<p><strong>Who is affected:</strong> Users running ProFTPD version 1.3.5 are affected, with distributions including Fedora, Debian, openSUSE Tumbleweed, and SUSE Linux Enterprise Server also impacted.</p>
+<p><strong>How serious:</strong> The vulnerability is rated as critical with a CVSS score of 10.0, indicating it allows full remote compromise without authentication.</p>
+<p><strong>What to do:</strong> Administrators should apply available patches from their distribution or vendor to update ProFTPD and mitigate the risk of unauthorized file access.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in ProFTPD on 2026-10-08, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 10.0); reach 80/100 via &quot;debian linux&quot;.</p>
+</article>
+<article>
+<h3 id="2-known-exploited-cve-2021-3199">2. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2021-3199">CVE-2021-3199</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2021-01-26</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in ONLYOFFICE Docs on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A directory traversal vulnerability in ONLYOFFICE Document Server before version 5.6.3 allows remote code execution via a crafted image upload parameter when JWT is enabled.</p>
+<p><strong>Who is affected:</strong> Organizations running ONLYOFFICE Document Server versions prior to 5.6.3 with JSON Web Token authentication enabled.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating a high likelihood of successful remote code execution.</p>
+<p><strong>What to do:</strong> Upgrade ONLYOFFICE Document Server to version 5.6.3 or later to remediate the issue.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in ONLYOFFICE Docs on 2026-10-08, so it is being used against people now -- that outranks severity. CRITICAL (CVSS 9.8); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="3-known-exploited-cve-2026-88779">3. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-88779">CVE-2026-88779</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.7</code> <code>published 2026-10-04</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A high-severity vulnerability in NetScaler ADC and NetScaler Gateway allows an unauthenticated attacker to cause a denial of service by crashing the affected application.</p>
+<p><strong>Who is affected:</strong> Organizations running NetScaler ADC versions before 14.1-73.41, 13.1-64.28, 14.1-73.41 FIPS, or 13.1-37.282, and NetScaler Gateway versions before 14.1-73.41 or 13.1-64.28.</p>
+<p><strong>How serious:</strong> The issue is rated HIGH severity with a CVSS score of 8.7 and is listed in the CISA Known Exploited Vulnerabilities catalog.</p>
+<p><strong>What to do:</strong> Administrators should upgrade to the fixed versions specified by Citrix and consult the provided support articles and community blogs for mitigation guidance.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Citrix NetScaler on 2026-10-04, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.7); reach 63/100 via &quot;netscaler&quot;.</p>
+</article>
+<article>
+<h3 id="4-known-exploited-cve-2016-3081">4. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2016-3081">CVE-2016-3081</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.1</code> <code>published 2016-04-26</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Apache Struts on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A vulnerability in Apache Struts versions 2.3.19 through 2.3.28 allows remote code execution when Dynamic Method Invocation is enabled. Attackers can exploit chained expressions using the method: prefix to run arbitrary commands on the affected server.</p>
+<p><strong>Who is affected:</strong> Organizations running Apache Struts 2.3.19 to 2.3.28 with Dynamic Method Invocation enabled are directly at risk. Additionally, Huawei products including Agile Controller-Campus, AnyOffice, LogCenter, Firehunter6000, and various OceanStor firmware versions are listed as affected.</p>
+<p><strong>How serious:</strong> The issue carries a high severity rating with a CVSS score of 8.1, indicating significant potential for remote code execution. This vulnerability allows attackers to compromise confidentiality, integrity, and availability without requiring authentication.</p>
+<p><strong>What to do:</strong> Administrators should upgrade Apache Struts to a version outside the affected range or disable Dynamic Method Invocation if upgrading is not immediately possible. Users of the listed Huawei products should consult the vendor&#x27;s security advisory for specific mitigation steps or patches.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Apache Struts on 2026-10-08, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.1); reach unrated (no entry in the reach table).</p>
+</article>
+<article>
+<h3 id="5-known-exploited-cve-2023-22894">5. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2023-22894">CVE-2023-22894</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>MEDIUM</code> <code>CVSS 4.9</code> <code>published 2023-04-19</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Strapi on 2026-10-08, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> Strapi versions through 4.5.5 contain a vulnerability that allows authenticated attackers to infer sensitive user details by exploiting query filters on user columns. This can lead to the exposure of password hashes and reset tokens for super admins or sensitive information for lower-privileged API users.</p>
+<p><strong>Who is affected:</strong> Organizations running Strapi versions 4.5.5 and earlier that expose an admin panel to users with varying levels of access.</p>
+<p><strong>How serious:</strong> The issue is rated as medium severity with a CVSS score of 4.9, primarily impacting confidentiality rather than integrity or availability.</p>
+<p><strong>What to do:</strong> Update Strapi to a patched version beyond 4.5.5 and review access controls to ensure only necessary users have admin panel privileges.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Strapi on 2026-10-08, so it is being used against people now -- that outranks severity. MEDIUM (CVSS 4.9); reach unrated (no entry in the reach table).</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
