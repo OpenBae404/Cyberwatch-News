@@ -5,7 +5,14 @@
     <link>https://cyberwatch.asutera.dev/</link>
     <description>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</description>
     <language>en</language>
-    <lastBuildDate>Sun, 11 Oct 2026 07:00:00 +0000</lastBuildDate>
+    <lastBuildDate>Mon, 12 Oct 2026 07:00:00 +0000</lastBuildDate>
+    <item>
+      <title>CyberWatch Newsletter -- 2026-10-12</title>
+      <link>https://cyberwatch.asutera.dev/issues/2026-10-12.html</link>
+      <guid isPermaLink="true">https://cyberwatch.asutera.dev/issues/2026-10-12.html</guid>
+      <pubDate>Mon, 12 Oct 2026 07:00:00 +0000</pubDate>
+      <description>5 items out of 605 considered, known-exploited first, then severity and reach (cap 5). Items: CVE-2015-3306, CVE-2021-3199, CVE-2016-3081, CVE-2023-22894, CVE-2026-108576.</description>
+    </item>
     <item>
       <title>CyberWatch Newsletter -- 2026-10-11</title>
       <link>https://cyberwatch.asutera.dev/issues/2026-10-11.html</link>
