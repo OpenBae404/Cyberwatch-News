@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>CyberWatch Newsletter -- 2026-10-15</title>
+<meta name="description" content="Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.">
+<link rel="stylesheet" href="../style.css">
+<link rel="alternate" type="application/rss+xml" title="CyberWatch Newsletter" href="../feed.xml">
+</head>
+<body>
+<header class="masthead">
+<h1>CyberWatch Newsletter</h1>
+<p>Five security items a day: vulnerabilities actually being exploited first, from the CISA KEV catalogue, then high-severity CVEs in widely deployed software.</p>
+</header>
+<nav class="crumbs"><a href="../index.html">&#8592; All issues</a></nav>
+<h2 id="cyberwatch-newsletter-2026-10-15">CyberWatch Newsletter -- 2026-10-15</h2>
+<p>5 items out of 600 considered, known-exploited first, then severity and reach (cap 5).</p>
+<p>Selection: 1 known-exploited (in the CISA KEV catalogue, attacks are happening now) and 4 severity-chosen (not known-exploited). Each item says which under &quot;Why this is here&quot;.</p>
+<article>
+<h3 id="1-known-exploited-cve-2026-104935">1. KNOWN EXPLOITED -- <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-104935">CVE-2026-104935</a></h3>
+<p class="tags"><code>KNOWN EXPLOITED</code> <code>HIGH</code> <code>CVSS 8.6</code> <code>published 2026-10-13</code></p>
+<blockquote><p><strong>KNOWN EXPLOITED.</strong> CISA lists this as known-exploited in Ivanti Connect Secure on 2026-10-13, so it is being used against people now -- that outranks severity.</p></blockquote>
+<p><strong>What happened:</strong> A remote unauthenticated attacker can bypass authentication by spoofing in Ivanti Connect Secure versions before 25.1.3.0 to execute arbitrary commands. This vulnerability does not affect Ivanti Connect Secure version 22.7R2.14 or prior.</p>
+<p><strong>Who is affected:</strong> Users running Ivanti Connect Secure versions prior to 25.1.3.0 are affected, while those on version 22.7R2.14 or earlier are not.</p>
+<p><strong>How serious:</strong> The vulnerability is rated HIGH severity with a CVSS score of 8.6, allowing remote command execution without authentication.</p>
+<p><strong>What to do:</strong> Administrators should review the official Ivanti security advisory and CISA catalog entry for guidance on mitigating this known exploited vulnerability.</p>
+<p><strong>Why this is here:</strong> Known exploited -- CISA lists this as known-exploited in Ivanti Connect Secure on 2026-10-13, so it is being used against people now -- that outranks severity. HIGH (CVSS 8.6); reach 58/100 via &quot;connect secure&quot;.</p>
+</article>
+<article>
+<h3 id="2-cve-2026-105016">2. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-105016">CVE-2026-105016</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.8</code> <code>published 2026-10-13</code></p>
+<p><strong>What happened:</strong> A heap-based buffer overflow in Microsoft QUIC allows an unauthorized attacker to execute code over a network.</p>
+<p><strong>Who is affected:</strong> Users of Microsoft .NET versions 8.0 through 11.0, Visual Studio 2022 and 2026, and Windows 11 versions 23H2 through 25H2.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.8, indicating high potential for complete system compromise.</p>
+<p><strong>What to do:</strong> Apply the available updates from Microsoft to patch the vulnerability in the affected products.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.8); reach 100/100 via &quot;windows&quot;.</p>
+</article>
+<article>
+<h3 id="3-cve-2026-109707">3. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-109707">CVE-2026-109707</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.6</code> <code>published 2026-10-13</code></p>
+<p><strong>What happened:</strong> A critical use-after-free vulnerability in the Networking component allows attackers to escape the browser sandbox. This flaw was addressed in Firefox 158, Firefox ESR 153.5, Thunderbird 158, and Thunderbird 153.5.</p>
+<p><strong>Who is affected:</strong> Users running Mozilla Firefox or Mozilla Thunderbird on any platform are at risk if they have not updated to the latest versions.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 9.6, indicating that successful exploitation can lead to complete system compromise.</p>
+<p><strong>What to do:</strong> Update Firefox and Thunderbird to the fixed versions immediately to prevent potential remote code execution.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.6); reach 90/100 via &quot;firefox&quot;.</p>
+</article>
+<article>
+<h3 id="4-cve-2026-105445">4. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-105445">CVE-2026-105445</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 9.4</code> <code>published 2026-10-13</code></p>
+<p><strong>What happened:</strong> An incorrect privilege assignment in Docker Hub&#x27;s account-to-organization conversion feature allowed an authenticated attacker to reassign a personal access token to another user without revoking the original secret. This enabled the attacker to authenticate as the recipient and pull, push, or delete images within the user&#x27;s accessible repositories.</p>
+<p><strong>Who is affected:</strong> Users of Docker Hub who utilize the account-to-organization conversion feature or manage personal access tokens with access to organization repositories.</p>
+<p><strong>How serious:</strong> The vulnerability is rated Critical with a CVSS score of 9.4, indicating high potential for complete confidentiality, integrity, and availability impact.</p>
+<p><strong>What to do:</strong> Review the official Docker security advisory for details on mitigation steps and monitor for any updates regarding token rotation or revocation procedures.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 9.4); reach 76/100 via &quot;docker&quot;.</p>
+</article>
+<article>
+<h3 id="5-cve-2026-103849">5. <a href="https://nvd.nist.gov/vuln/detail/CVE-2026-103849">CVE-2026-103849</a></h3>
+<p class="tags"><code>CRITICAL</code> <code>CVSS 10.0</code> <code>published 2026-10-13</code></p>
+<p><strong>What happened:</strong> Adobe Commerce, Adobe Commerce B2B, and Magento Open Source contain a vulnerability allowing arbitrary code execution through improper neutralization of special elements in a template engine. This flaw can lead to elevated access or control over a victim&#x27;s account or session without requiring user interaction.</p>
+<p><strong>Who is affected:</strong> Organizations running Adobe Commerce, Adobe Commerce B2B, or Magento Open Source are impacted by this critical vulnerability.</p>
+<p><strong>How serious:</strong> The issue is rated Critical with a CVSS score of 10.0, indicating it can result in complete compromise of confidentiality, integrity, and availability.</p>
+<p><strong>What to do:</strong> Administrators should review the official Adobe security advisory for details on affected versions and available patches to mitigate the risk.</p>
+<p><strong>Why this is here:</strong> Severity-chosen -- not in the CISA KEV catalogue, selected on severity and reach. CRITICAL (CVSS 10.0); reach unrated (no entry in the reach table).</p>
+</article>
+<p><em>Summaries: 5/5 written by a local LLM.</em> <em>Source: NVD CVE 2.0 API.</em></p>
+<footer class="colophon"><p><a href="../index.html">All issues</a> &#183; <a href="../feed.xml">RSS feed</a></p></footer>
+</body>
+</html>
